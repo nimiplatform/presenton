@@ -10,7 +10,7 @@ from json import JSONDecodeError
 from time import perf_counter
 from typing import Any, Callable
 
-from llmai import get_client
+from services.nimi_llm import get_client
 from llmai.shared import (
     AssistantMessage,
     ImageContentPart,
@@ -683,7 +683,6 @@ def generate_prompted_slide_layout(
         response_name="PromptedTemplateLayoutResponse",
         validation_retries=DEFAULT_VALIDATION_RETRIES,
         extra_validator=validate_generated_layout,
-        max_tokens=16_000,
     )
     return _replace_content_image_urls(SlideLayout.model_validate(generated))
 
@@ -1094,7 +1093,7 @@ def _generate_with_validation_retries(
     response_name: str,
     validation_retries: int,
     extra_validator: Callable[[Any], None] | None = None,
-    max_tokens: int = 8192,
+    max_tokens: int | None = None,
 ) -> dict[str, Any]:
     attempt_messages = list(messages)
     last_error: Exception | None = None

@@ -6,6 +6,25 @@ from templates.v2 import certified_generation as generation
 from templates.v2.generation import generate_slide_layout
 
 
+def test_nimi_failure_is_not_reported_as_a_converted_template(monkeypatch):
+    from services.nimi_channel import NimiCallError
+    monkeypatch.setattr(generation, "_openai_image_part", lambda _: generation.ImageContentPart(url="https://example.com/slide.png"))
+    def rejected(**kwargs):
+        raise NimiCallError({"reasonCode": "ai-provider-auth-failed"})
+    monkeypatch.setattr(generation, "_generate_structured_with_provider_fallback", rejected)
+    with pytest.raises(NimiCallError):
+        generate_slide_layout(_raw_layout(), 0, "slide.png")
+
+
+def test_portable_visual_schema_preserves_union_validation():
+    from jsonschema import Draft202012Validator
+    schema = generation._llm_output_json_schema(generation.VisualDataReplacementPlan)
+    assert '"discriminator"' not in json.dumps(schema)
+    validator = Draft202012Validator(schema)
+    validator.validate({"replacements": []})
+    assert list(validator.iter_errors({"replacements": [{"kind": "unknown"}]}))
+
+
 def _raw_layout():
     return generation.RawSlideLayout.model_validate(
         {
@@ -830,7 +849,7 @@ def test_visual_data_llm_schema_uses_table_envelope_only_for_gemini():
     assert "VisualInfographicReplacement" not in schema["$defs"]
 
     runtime_items = canonical_schema["properties"]["replacements"]["items"]
-    assert "discriminator" in runtime_items
+    assert "discriminator" not in runtime_items
     assert "oneOf" in runtime_items
     runtime_definition_names = {
         alternative["$ref"].rsplit("/", 1)[-1]

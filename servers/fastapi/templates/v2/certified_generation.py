@@ -22,8 +22,10 @@ from llmai.shared import (
     UserMessage,
 )
 from pydantic import BaseModel, TypeAdapter, ValidationError
+from services.nimi_channel import NimiCallError
 
 from templates.v2.models.layouts import (
+    TemplateJsonSchema,
     Component,
     FlexibleFlowItemPlan,
     FlexibleFlowNodePlan,
@@ -577,7 +579,6 @@ def merge_similar_components(layouts: SlideLayouts) -> MergedComponents:
             component_count=len(indexed_components),
         ),
         providers=_template_clustering_structured_providers(),
-        max_tokens=16000,
     )
     clusters = SimilarComponentsList.model_validate(response)
     merged = _build_merged_components(
@@ -3689,6 +3690,8 @@ def generate_slide_layout(
                 source_layout,
                 visual_plan,
             )
+        except NimiCallError:
+            raise
         except Exception:
             LOGGER.exception(
                 "[templates.v2.generate] visual-data pass failed; preserving "
@@ -3725,6 +3728,8 @@ def generate_slide_layout(
             max_tokens=max_tokens,
         )
         manifest = SemanticSlideManifest.model_validate(semantic_response)
+    except NimiCallError:
+        raise
     except Exception:
         LOGGER.exception(
             "[templates.v2.generate] semantic pass failed; using "
@@ -3762,6 +3767,8 @@ def generate_slide_layout(
             max_tokens=max_tokens,
         )
         flexible_plan = FlexibleSlidePlan.model_validate(flexible_response)
+    except NimiCallError:
+        raise
     except Exception:
         LOGGER.exception(
             "[templates.v2.generate] flexible-region pass failed; preserving "
@@ -3803,6 +3810,8 @@ def generate_slide_layout(
             max_tokens=max_tokens,
         )
         text_capacity_plan = TextCapacityPlan.model_validate(text_capacity_response)
+    except NimiCallError:
+        raise
     except Exception:
         LOGGER.exception(
             "[templates.v2.generate] text-capacity pass failed; preserving "
@@ -4206,7 +4215,7 @@ def _call_llm(
     messages: TemplateMessages,
     response_schema: dict[str, Any],
     response_name: str,
-    max_tokens: int,
+    max_tokens: int | None,
 ) -> Any:
     response_schema = _response_schema_for_model(
         model=model,
@@ -4286,7 +4295,7 @@ def _generate_structured_with_provider_fallback(
     max_tokens: int | None = None,
 ) -> dict[str, Any]:
     response_schema = _llm_output_json_schema(output_model)
-    effective_max_tokens = max_tokens or TEMPLATE_GENERATION_MAX_COMPLETION_TOKENS
+    effective_max_tokens = max_tokens
     attempts_per_provider = max(1, validation_retries)
     last_error: Exception | None = None
 
@@ -4338,6 +4347,8 @@ def _generate_structured_with_provider_fallback(
                 )
                 return validated
             except Exception as exc:
+                if isinstance(exc, NimiCallError) and not exc.retryable and exc.reason_code != "ai-output-invalid":
+                    raise
                 last_error = exc
                 LOGGER.warning(
                     "[templates.v2.llm] request failed label=%s provider=%s "
@@ -4586,7 +4597,7 @@ def _llm_output_json_schema(output_model: type[BaseModel]) -> dict[str, Any]:
         return text_capacity_plan_llm_json_schema()
     if output_model is SlideLayout:
         return slide_layout_llm_json_schema()
-    return output_model.model_json_schema()
+    return output_model.model_json_schema(schema_generator=TemplateJsonSchema)
 
 
 def _format_error_for_prompt(error: Exception) -> str:

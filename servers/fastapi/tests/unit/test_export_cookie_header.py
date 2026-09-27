@@ -19,18 +19,20 @@ def _request(*, headers: dict[str, str]) -> Request:
     return request
 
 
-def test_internal_session_token_wins_over_mcp_bearer_token():
+def test_export_uses_host_key_not_an_internal_or_bearer_token(monkeypatch):
+    monkeypatch.setenv("PRESENTON_HOST_KEY", "a" * 64)
     request = _request(
         headers={"Authorization": "Bearer sk-presenton-api-key"}
     )
     request.state.internal_session_token = "middleware-generated-jwt"
 
     assert build_export_cookie_header(request) == (
-        f"{SESSION_COOKIE_NAME}=middleware-generated-jwt"
+        "presenton_session=" + "a" * 64
     )
 
 
-def test_browser_cookie_wins_over_internal_and_bearer_tokens():
+def test_browser_cookie_does_not_replace_business_host_key(monkeypatch):
+    monkeypatch.setenv("PRESENTON_HOST_KEY", "b" * 64)
     cookie_header = f"{SESSION_COOKIE_NAME}=browser-jwt; theme=dark"
     request = _request(
         headers={
@@ -40,4 +42,4 @@ def test_browser_cookie_wins_over_internal_and_bearer_tokens():
     )
     request.state.internal_session_token = "middleware-generated-jwt"
 
-    assert build_export_cookie_header(request) == cookie_header
+    assert build_export_cookie_header(request) == "presenton_session=" + "b" * 64

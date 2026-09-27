@@ -9,13 +9,11 @@ from collections.abc import Awaitable, Callable, Sequence
 from dataclasses import replace
 from typing import Any, Optional
 
-import llmai
 from fastapi import HTTPException
-from llmai import get_client
+from services.nimi_llm import get_client
 from llmai.shared import (
     Message,
     ReasoningConfig,
-    ReasoningEffortValue,
     ResponseStreamCompletionChunk,
     ResponseStreamThinkingChunk,
     SystemMessage,
@@ -24,12 +22,8 @@ from llmai.shared import (
 
 from constants.presentation import MAX_NUMBER_OF_SLIDES
 from utils.llm_client_error_handler import handle_llm_client_exceptions
-from utils.llm_config import (
-    disable_thinking,
-    get_llm_config,
-    has_explicit_reasoning_settings,
-)
-from utils.llm_provider import get_llm_provider, get_model
+from utils.llm_config import get_llm_config
+from utils.llm_provider import get_model
 from utils.llm_utils import (
     TextGenerationMetrics,
     build_text_generation_metrics,
@@ -684,8 +678,8 @@ async def _stream_deck_response(
                 status_code=422,
                 detail=(
                     "The model reached its output-token limit before producing a "
-                    "complete Smart slide. Increase Max output tokens in Advanced "
-                    "text-provider settings or reduce the slide count/reasoning effort."
+                    "complete Smart slide. Review Max output tokens in Nimi "
+                    "AI model settings or reduce the slide count/reasoning effort."
                 ),
             )
         raise HTTPException(status_code=400, detail="LLM did not return any content")
@@ -703,31 +697,8 @@ async def _stream_deck_response(
 
 
 def get_smart_reasoning_config(model: str) -> tuple[ReasoningConfig | None, bool]:
-    """Enable reasoning only when llmai knows the selected model supports it."""
-    if disable_thinking() and not has_explicit_reasoning_settings():
-        return None, False
-
-    provider = get_llm_provider().value
-    try:
-        supports_thinking = llmai.supports_thinking(model, provider=provider) is True
-    except Exception:
-        supports_thinking = False
-    if has_explicit_reasoning_settings():
-        return None, supports_thinking
-    if not supports_thinking:
-        return None, False
-
-    return (
-        ReasoningConfig(
-            enabled=True,
-            effort=(
-                ReasoningEffortValue.LOW
-                if provider in {"openai", "azure"}
-                else None
-            ),
-        ),
-        True,
-    )
+    # Runtime resolves configured behavior; do not guess from model names.
+    return None, False
 
 
 async def generate_smart_presentation(

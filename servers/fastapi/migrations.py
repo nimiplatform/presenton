@@ -1,5 +1,4 @@
 import asyncio
-from pathlib import Path
 
 from alembic import command
 from alembic.config import Config
@@ -8,6 +7,7 @@ from sqlalchemy import create_engine, inspect, text
 
 from utils.db_utils import get_database_url_and_connect_args, to_sync_sqlalchemy_url
 from utils.get_env import get_migrate_database_on_startup_env
+from utils.path_helpers import get_resource_path
 
 
 LEGACY_BASELINE_REVISION = "00b3c27a13bc"
@@ -50,11 +50,9 @@ async def migrate_database_on_startup() -> None:
 
 
 def _run_migrations() -> None:
-    # migrations.py lives at servers/fastapi/migrations.py
-    # so parents[0] = servers/fastapi/, where alembic/ lives alongside it.
-    base_dir = Path(__file__).resolve().parents[0]
     config = Config()
-    config.set_main_option("script_location", str(base_dir / "alembic"))
+    # The Host supplies the business-resource cwd in both source and frozen builds.
+    config.set_main_option("script_location", get_resource_path("alembic"))
 
     database_url, _ = get_database_url_and_connect_args()
 

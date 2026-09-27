@@ -1,3 +1,4 @@
+import { requireBackendState } from '@/lib/nimi-server';
 import { NextRequest, NextResponse } from "next/server";
 import fs from "fs/promises";
 import path from "path";
@@ -31,8 +32,7 @@ async function readExportRequestBody(req: NextRequest): Promise<{
   return parsed as { format?: unknown; id?: unknown; title?: unknown };
 }
 
-function buildExportDownloadUrl(outPath: string): string {
-  const appDataDirectory = process.env.APP_DATA_DIRECTORY?.trim();
+function buildExportDownloadUrl(outPath: string, appDataDirectory: string): string {
   if (!appDataDirectory) {
     throw new Error("APP_DATA_DIRECTORY is required to download exported files.");
   }
@@ -52,13 +52,13 @@ function buildExportDownloadUrl(outPath: string): string {
 
 async function moveExportIntoOwnerDirectory(
   outPath: string,
-  userId: string | null
+  userId: string | null,
+  appDataDirectory: string
 ): Promise<string> {
   if (!userId) {
     return outPath;
   }
 
-  const appDataDirectory = process.env.APP_DATA_DIRECTORY?.trim();
   if (!appDataDirectory) {
     throw new Error("APP_DATA_DIRECTORY is required to scope exported files.");
   }
@@ -113,7 +113,8 @@ export async function POST(req: NextRequest) {
   }
 
   const { format, id, title } = body;
-  const cookieHeader = req.headers.get("cookie") ?? "";
+  const state = requireBackendState(req.headers);
+  const cookieHeader = `presenton_session=${state.key}`;
 
   if (typeof id !== "string" || !id.trim()) {
     return NextResponse.json(
@@ -144,12 +145,14 @@ export async function POST(req: NextRequest) {
     });
     const outPath = await moveExportIntoOwnerDirectory(
       unscopedOutPath,
-      auth.user_id
+      auth.user_id,
+      state.dataDirectory
     );
+    requireBackendState(req.headers);
 
     return NextResponse.json({
       success: true,
-      path: buildExportDownloadUrl(outPath),
+      path: buildExportDownloadUrl(outPath, state.dataDirectory),
     });
   } catch (e) {
     const message = e instanceof Error ? e.message : String(e);

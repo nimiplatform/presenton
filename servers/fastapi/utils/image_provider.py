@@ -55,4 +55,4 @@ def get_selected_image_provider() -> ImageProvider | None:
     image_provider_env = get_image_provider_env()
     if image_provider_env:
         return ImageProvider(image_provider_env)
-    return None
+    return ImageProvider.NIMI

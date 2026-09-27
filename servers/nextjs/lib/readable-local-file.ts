@@ -1,5 +1,4 @@
 import fs from "fs";
-import os from "os";
 import path from "path";
 
 export class LocalFileAccessError extends Error {
@@ -24,13 +23,14 @@ function resolveBaseDir(baseDir: string): string {
 type FileOwnerScope = {
   userId: string | null;
   isAdmin: boolean;
+  dataDirectory: string;
 };
 
-function allowedReadableFileBaseDirs(scope?: FileOwnerScope): string[] {
+function allowedReadableFileBaseDirs(scope: FileOwnerScope): string[] {
   const appDataDirectory =
-    process.env.APP_DATA_DIRECTORY?.trim() || "/app/user_data";
+    scope.dataDirectory;
   const tempDirectory =
-    process.env.TEMP_DIRECTORY?.trim() || path.join(os.tmpdir(), "presenton");
+    path.join(scope.dataDirectory, 'tmp');
 
   if (scope?.userId) {
     const userId = scope.userId;
@@ -96,7 +96,7 @@ function assertPathAllowed(candidatePath: string, baseDirs: string[]): void {
 
 export function resolveReadableLocalFile(
   filePath: unknown,
-  scope?: FileOwnerScope,
+  scope: FileOwnerScope,
 ): string {
   if (typeof filePath !== "string" || filePath.trim().length === 0) {
     throw new LocalFileAccessError("Invalid file path", 400);
@@ -122,7 +122,7 @@ export function resolveReadableLocalFile(
 
 export function readReadableLocalFile(
   filePath: unknown,
-  scope?: FileOwnerScope,
+  scope: FileOwnerScope,
 ): string {
   const resolvedPath = resolveReadableLocalFile(filePath, scope);
 

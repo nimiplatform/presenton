@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Optional
 
-from llmai import get_client
+from services.nimi_llm import get_client
 from llmai.shared import JSONSchemaResponse, Message, SystemMessage, UserMessage
 from models.presentation_layout import SlideLayoutModel
 from models.sql.slide import SlideModel
@@ -141,7 +141,8 @@ async def get_edited_slide_content(
         response_format = JSONSchemaResponse(
             name="response",
             json_schema=response_schema,
-            strict=True,
+            # Preserve the same template constraints used for generation.
+            strict=False,
         )
         messages = get_messages(
             prompt,

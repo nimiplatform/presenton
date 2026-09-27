@@ -3,7 +3,7 @@ from datetime import datetime
 import logging
 from typing import Optional
 
-from llmai import get_client
+from services.nimi_llm import get_client
 from llmai.shared import (
     JSONSchemaResponse,
     Message,

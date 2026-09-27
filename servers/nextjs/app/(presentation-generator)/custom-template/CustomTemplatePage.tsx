@@ -21,7 +21,6 @@ import {
   Upload,
   X,
 } from "lucide-react";
-import { useSelector } from "react-redux";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -47,7 +46,6 @@ import {
   LOCAL_FONT_OPTIONS,
   type LocalFontOption,
 } from "@/components/slide-editor/text/local-fonts";
-import type { RootState } from "@/store/store";
 import { normalizeBackendAssetUrls, resolveBackendAssetUrl } from "@/utils/api";
 import { setupImageUrlConverter } from "@/utils/image-url-converter";
 import { MixpanelEvent, trackEvent } from "@/utils/mixpanel";
@@ -66,10 +64,6 @@ import type {
   TemplateV2Layout,
   UploadedFont,
 } from "./types";
-import {
-  dismissTemplateV2ModelWarning,
-  showTemplateV2ModelWarningIfNeeded,
-} from "./utils/templateModelWarning";
 
 
 
@@ -379,9 +373,8 @@ function UploadPanel({
             i
           </span>
           <p>
-            Presenton sends each slide as a screenshot and HTML reference. Use a
-            vision-enabled model for accurate layouts. Text-only models may produce
-            poor results or fail.
+            Template creation uses slide images. In Settings → AI models, select
+            a Nimi text model that supports image inputs and structured output.
           </p>
         </div>
       </div>
@@ -1514,7 +1507,6 @@ function SaveTemplateModal({
 
 const CustomTemplatePage = () => {
   const router = useRouter();
-  const llmConfig = useSelector((state: RootState) => state.userConfig.llm_config);
   const [reviewSlideIndex, setReviewSlideIndex] = useState(0);
   const [templateModalMode, setTemplateModalMode] = useState<"create" | "save" | null>(null);
   const [isSubmittingTemplate, setIsSubmittingTemplate] = useState(false);
@@ -1614,12 +1606,6 @@ const CustomTemplatePage = () => {
     [],
   );
 
-  useEffect(() => {
-    showTemplateV2ModelWarningIfNeeded(llmConfig);
-    return () => {
-      dismissTemplateV2ModelWarning();
-    };
-  }, [llmConfig]);
 
   useEffect(() => {
     autoPreviewStartedRef.current = false;

@@ -173,7 +173,7 @@ const PresentationPage: React.FC<PresentationPageProps> = ({
   const [isMobileAssistantOpen, setIsMobileAssistantOpen] = useState(false);
   const [isRightPanelOpen, setIsRightPanelOpen] = useState(false);
   const [showNavigationHint, setShowNavigationHint] = useState(false);
-  const [error, setError] = useState(false);
+  const [error, setError] = useState<boolean | string>(false);
   const mobileAssistantTriggerRef = useRef<HTMLButtonElement | null>(null);
   const mobileAssistantCloseRef = useRef<HTMLButtonElement | null>(null);
   const presentationCanvasRef = useRef<HTMLDivElement | null>(null);
@@ -810,7 +810,9 @@ const PresentationPage: React.FC<PresentationPageProps> = ({
           <AlertCircle className="w-16 h-16 mb-4 text-red-500" />
           <h2 className="text-xl font-semibold mb-2">Something went wrong</h2>
           <p className="text-center mb-4">
-            We couldn't load your presentation. Please try again.
+            {typeof error === "string"
+              ? error
+              : "We couldn't load your presentation. Please try again."}
           </p>
           <div className="flex gap-2 justify-center items-center">
             <Button
@@ -834,6 +836,9 @@ const PresentationPage: React.FC<PresentationPageProps> = ({
               }}
             >
               Go to Upload
+            </Button>
+            <Button variant="outline" onClick={() => router.push("/settings")}>
+              AI model settings
             </Button>
           </div>
         </div>

@@ -23,6 +23,7 @@ interface ElectronAPI {
 }
 
 interface Window {
+  presentonHost?: { platform: string };
   electron?: ElectronAPI;
   env?: {
     NEXT_PUBLIC_FAST_API: string;

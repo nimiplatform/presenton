@@ -3,7 +3,7 @@ export const TAILWIND_BROWSER_SCRIPT_URL =
   `/vendor/tailwindcss-browser-${TAILWIND_BROWSER_VERSION}.js`;
 
 export const TAILWIND_BROWSER_STYLE_CONTENT = `
-@import "tailwindcss/theme";
+@import "tailwindcss/theme.css";
 
 @scope ([data-tailwind-runtime-scope]) {
   @tailwind utilities;

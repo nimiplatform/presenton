@@ -22,6 +22,7 @@ from llmai.shared import (
 
 from utils.llm_config import get_extra_body
 from utils.schema_utils import get_schema_validation_errors
+from services.nimi_channel import NimiCallError
 
 LOGGER = logging.getLogger(__name__)
 CLIENT_DISCONNECT_POLL_SECONDS = 0.1
@@ -83,19 +84,26 @@ async def _generate_structured_content(
     # the other providers, so it is the single path.
     completion_content: Any = None
     streamed_text: list[str] = []
-    async for event in stream_generate_events(
-        client,
-        disconnect_checker=disconnect_checker,
-        **{**kwargs, "stream": True},
-    ):
-        if isinstance(event, ResponseStreamCompletionChunk):
-            completion_content = event.content
-        elif getattr(event, "type", None) == "content":
-            chunk = getattr(event, "chunk", None)
-            if isinstance(chunk, str):
-                streamed_text.append(chunk)
-                if text_chunk_callback is not None:
-                    await text_chunk_callback(chunk)
+    try:
+        async for event in stream_generate_events(
+            client,
+            disconnect_checker=disconnect_checker,
+            **{**kwargs, "stream": True},
+        ):
+            if isinstance(event, ResponseStreamCompletionChunk):
+                completion_content = event.content
+            elif getattr(event, "type", None) == "content":
+                chunk = getattr(event, "chunk", None)
+                if isinstance(chunk, str):
+                    streamed_text.append(chunk)
+                    if text_chunk_callback is not None:
+                        await text_chunk_callback(chunk)
+    except NimiCallError as error:
+        if error.reason_code == "ai-output-invalid":
+            # A rejected draft is feedback for another model step, never a
+            # completed result. Nimi must validate the replacement response.
+            error.rejected_candidate = extract_structured_content("".join(streamed_text))
+        raise
 
     content = extract_structured_content(completion_content)
     if content is not None:
@@ -331,20 +339,31 @@ async def generate_structured_with_schema_retries(
         content: Optional[dict] = None
         for attempt in range(3):
             await _raise_if_client_disconnected(disconnect_checker)
-            content = await _generate_structured_content(
-                client,
-                disconnect_checker=disconnect_checker,
-                text_chunk_callback=(
-                    text_chunk_callback
-                    if validation_attempt == 0 and attempt == 0
-                    else None
-                ),
-                **get_generate_kwargs(
-                    model=model,
-                    messages=working_messages,
-                    response_format=response_format,
-                ),
-            )
+            try:
+                content = await _generate_structured_content(
+                    client,
+                    disconnect_checker=disconnect_checker,
+                    text_chunk_callback=(
+                        text_chunk_callback
+                        if validation_attempt == 0 and attempt == 0
+                        else None
+                    ),
+                    **get_generate_kwargs(
+                        model=model,
+                        messages=working_messages,
+                        response_format=response_format,
+                    ),
+                )
+            except NimiCallError as error:
+                if error.reason_code != "ai-output-invalid" or attempt == 2:
+                    raise
+                candidate = getattr(error, "rejected_candidate", None)
+                errors = get_schema_validation_errors(json_schema, candidate, strict=strict)
+                LOGGER.warning("Nimi rejected structured output; requesting correction %s/2: %s", attempt + 1, " | ".join(errors))
+                working_messages.append(structured_validation_feedback_user_message(
+                    candidate, errors or ["Nimi rejected the response. Return one complete JSON object matching all schema constraints."]
+                ))
+                continue
             if content is not None:
                 break
             if attempt < 2:
@@ -371,10 +390,10 @@ async def generate_structured_with_schema_retries(
         formatted_validation_errors = " | ".join(validation_errors)
         if validation_attempt == max_validation_loops - 1:
             LOGGER.warning(
-                "Validation error after max fixes, returning last response: %s",
+                "Validation error after max fixes: %s",
                 formatted_validation_errors,
             )
-            return content
+            raise HTTPException(status_code=422, detail="The model could not produce valid presentation content. Please try again or choose another model.")
 
         LOGGER.warning(
             "Validation error, attempting fix %s/%s: %s",
@@ -527,6 +546,8 @@ async def stream_generate_events(
         raise
     finally:
         stop_requested.set()
+        if not completed and callable(getattr(client, "cancel", None)):
+            client.cancel()
         if completed or worker_task.done():
             await worker_task
         else:

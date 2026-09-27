@@ -152,7 +152,13 @@ class ExportTaskService:
         return os.path.join(export_dir, "runner.mjs")
 
     def _build_node_env(self) -> Mapping[str, str]:
-        env = os.environ.copy()
+        env = {key: os.environ[key] for key in (
+            "PATH", "SystemRoot", "WINDIR", "TEMP", "TMP", "TMPDIR", "LANG",
+            "APP_DATA_DIRECTORY", "TEMP_DIRECTORY", "NEXT_PUBLIC_URL", "NEXT_PUBLIC_FAST_API",
+            "PRESENTON_APP_ROOT", "PRESENTON_ELECTRON", "ELECTRON_RUN_AS_NODE", "EXPORT_PACKAGE_ROOT",
+            "PUPPETEER_EXECUTABLE_PATH", "PUPPETEER_CACHE_DIR", "PUPPETEER_TMP_DIR",
+            "IMAGEMAGICK_BINARY", "MAGICK_HOME", "LITEPARSE_TESSDATA_PATH",
+        ) if key in os.environ}
 
         app_data_directory = get_app_data_directory_env()
         if not app_data_directory:

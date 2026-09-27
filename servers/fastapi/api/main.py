@@ -7,11 +7,9 @@ from starlette.requests import Request
 from starlette.responses import FileResponse
 
 from api.lifespan import app_lifespan
-from api.middlewares import SessionAuthMiddleware, UserConfigEnvUpdateMiddleware
+from api.nimi_access import HostOnlyMiddleware, router as NIMI_AUTH_ROUTER
+from services.nimi_business_settings import router as BUSINESS_SETTINGS_ROUTER
 from api.v1.async_tasks.router import API_V1_ASYNC_TASKS_ROUTER
-from api.v1.auth.router import API_V1_AUTH_ROUTER
-from api.v1.admin.router import API_V1_ADMIN_ROUTER
-from api.v1.mock.router import API_V1_MOCK_ROUTER
 from api.v1.ppt.router import API_V1_PPT_ROUTER
 from api.v1.webhook.router import API_V1_WEBHOOK_ROUTER
 from api.v2.router import API_V2_ROUTER
@@ -66,9 +64,8 @@ app = FastAPI(lifespan=app_lifespan)
 # Routers
 app.include_router(API_V1_PPT_ROUTER)
 app.include_router(API_V1_WEBHOOK_ROUTER)
-app.include_router(API_V1_MOCK_ROUTER)
-app.include_router(API_V1_AUTH_ROUTER)
-app.include_router(API_V1_ADMIN_ROUTER)
+app.include_router(NIMI_AUTH_ROUTER)
+app.include_router(BUSINESS_SETTINGS_ROUTER)
 app.include_router(API_V1_ASYNC_TASKS_ROUTER)
 app.include_router(API_V2_ROUTER)
 
@@ -96,8 +93,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.add_middleware(UserConfigEnvUpdateMiddleware)
-app.add_middleware(SessionAuthMiddleware)
 
 
 @app.middleware("http")
@@ -113,3 +108,5 @@ async def static_icon_fallback_middleware(request: Request, call_next):
     if not os.path.isfile(placeholder):
         return response
     return FileResponse(placeholder, media_type="image/svg+xml")
+
+app.add_middleware(HostOnlyMiddleware)

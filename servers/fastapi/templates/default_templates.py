@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 import shutil
 from pathlib import Path, PurePosixPath
 from typing import Any
@@ -55,7 +56,7 @@ async def import_default_templates_on_startup(
 
 
 def _default_templates_root() -> Path:
-    return Path(__file__).resolve().parents[3] / "templates"
+    return Path(os.environ["PRESENTON_APP_ROOT"]) / "templates" if os.getenv("PRESENTON_APP_ROOT") else Path(__file__).resolve().parents[3] / "templates"
 
 
 def resolve_default_template_id(

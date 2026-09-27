@@ -1,28 +1,7 @@
-import AuthGate from "@/components/Auth/AuthGate";
-import Home from "@/components/Home";
-import { ConfigurationInitializer } from "./ConfigurationInitializer";
-import { isAuthDisabled } from "@/utils/auth";
-import { getServerAuthStatus } from "@/utils/serverAuth";
-
-const page = async () => {
-    if (isAuthDisabled()) {
-        return (
-            <ConfigurationInitializer>
-                <Home />
-            </ConfigurationInitializer>
-        );
-    }
-
-    const status = await getServerAuthStatus();
-    if (status.configured && status.authenticated) {
-        return (
-            <ConfigurationInitializer>
-                <Home />
-            </ConfigurationInitializer>
-        );
-    }
-
-    return <AuthGate />;
-};
-
-export default page;
+"use client";
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+export default function Home() {
+  const router = useRouter(); useEffect(() => { router.replace('/dashboard'); }, [router]);
+  return <main className="p-8" role="status">Opening your presentations…</main>;
+}

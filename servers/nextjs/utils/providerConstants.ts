@@ -89,6 +89,7 @@ export const WEB_SEARCH_PROVIDERS: Record<string, WebSearchProviderOption> = {
 };
 
 export const IMAGE_PROVIDERS: Record<string, ImageProviderOption> = {
+  nimi: { value: "nimi", label: "Nimi", description: "Generate with this App’s Nimi image configuration." },
   pexels: {
     value: "pexels",
     label: "Pexels",
@@ -180,6 +181,7 @@ export const IMAGE_PROVIDERS: Record<string, ImageProviderOption> = {
 };
 
 export const LLM_PROVIDERS: Record<string, LLMProviderOption> = {
+  nimi: { value: "nimi", label: "Nimi AI", description: "Use this App’s Nimi text configuration." },
   presenton: {
     value: "presenton",
     label: "Presenton",

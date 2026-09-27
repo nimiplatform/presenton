@@ -1,0 +1,11 @@
+build_profile_ref: electron-pnpm
+profile_role: developer-workflow-input
+test_command: pnpm run test:app
+build_command: pnpm run build:electron:production
+targets:
+  macos-aarch64:
+    build_command: pnpm run build:electron:macos
+    os: macos
+    arch: arm64
+    payload_path: dist-electron-package/presenton-shell-darwin-arm64
+    runtime_entry: payload/presenton-shell.app/Contents/MacOS/presenton-shell

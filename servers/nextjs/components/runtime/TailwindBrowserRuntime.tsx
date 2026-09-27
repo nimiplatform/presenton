@@ -25,7 +25,7 @@ function notifyRuntimeReady() {
 export default function TailwindBrowserRuntime() {
   const pathname = usePathname();
   const [loadRequested, setLoadRequested] = useState(false);
-  const deferUntilRequested = pathname === "/";
+  const deferUntilRequested = true;
 
   useEffect(() => {
     if (pathname === "/pdf-maker" || !deferUntilRequested) return;

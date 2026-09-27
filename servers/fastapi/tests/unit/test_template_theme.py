@@ -191,7 +191,7 @@ def test_llm_receives_only_compact_profile(monkeypatch):
     assert "components" not in prompt_payload
     assert "Example title" not in prompt_payload
     assert "https://" not in prompt_payload
-    assert captured["max_tokens"] == 2000
+    assert "max_tokens" not in captured
 
 
 def test_generation_falls_back_and_theme_wraps_for_presentation(monkeypatch):

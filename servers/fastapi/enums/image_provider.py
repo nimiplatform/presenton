@@ -2,6 +2,7 @@ from enum import Enum
 
 
 class ImageProvider(Enum):
+    NIMI = "nimi"
     PEXELS = "pexels"
     PIXABAY = "pixabay"
     GEMINI_FLASH = "gemini_flash"

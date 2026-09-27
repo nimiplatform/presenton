@@ -30,9 +30,13 @@ async def safe_sse_stream(
                 logger.exception("SSE stream error cleanup failed")
         detail = exc.detail if isinstance(exc, HTTPException) else error_detail
         metadata: dict[str, object] = {}
+        if isinstance(getattr(exc, "retryable", None), bool):
+            metadata["retryable"] = exc.retryable
+        if getattr(exc, "error_type", None):
+            metadata["error_type"] = exc.error_type
         if error_metadata:
             try:
-                metadata = await error_metadata(exc)
+                metadata.update(await error_metadata(exc))
             except Exception:
                 logger.exception("SSE stream error metadata lookup failed")
         yield SSEErrorResponse(detail=str(detail), **metadata).to_string()

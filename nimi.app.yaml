@@ -1,0 +1,32 @@
+app_id: io.github.nimiplatform.presenton
+display_name: Presenton
+version: 0.9.11-beta.2
+profile: standalone
+manifest_role: submitted-input
+app_access:
+  - runtime.consume
+capability_contract_refs:
+  - text.generate
+  - image.generate
+  - text.embed
+required_standardized_feature_refs: []
+storage_policy:
+  kind: app-owned-os-storage
+  os_storage_disclosure:
+    - path_pattern: ~/Library/Application Support/Presenton Nimi/workspaces/
+      purpose: Presentation databases, templates, uploaded documents, generated images and document retrieval caches, partitioned by the Nimi-managed App workspace identifier
+      expected_size_band: 10 MB–10 GB depending on imported media
+    - path_pattern: User-selected download destinations
+      purpose: Exported PDF and PPTX presentations
+      expected_size_band: Up to hundreds of MB per presentation
+local_development:
+  electron:
+    renderer_origin: http://127.0.0.1:6016
+    host_source_directory: electron/nimi
+metadata:
+  summary: Create, edit and export presentations with Nimi AI and Presenton's templates and slide editor.
+  icon: electron/build/icon.iconset/icon_512x512.png
+  readme: README.md
+  author: Presenton contributors; Nimi adaptation contributors
+  homepage_url: https://github.com/nimiplatform/presenton
+  support_url: https://github.com/nimiplatform/presenton/issues

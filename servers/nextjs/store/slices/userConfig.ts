@@ -8,8 +8,8 @@ interface UserConfigState {
 
 const initialState: UserConfigState = {
   llm_config: {
-    LLM: "",
-    IMAGE_PROVIDER: "gpt-image-1.5",
+    LLM: "nimi",
+    IMAGE_PROVIDER: "nimi",
 
   },
   can_change_keys: false,

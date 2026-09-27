@@ -2,7 +2,7 @@ import json
 from datetime import datetime
 from typing import Optional
 
-from llmai import get_client
+from services.nimi_llm import get_client
 from llmai.shared import JSONSchemaResponse, Message, SystemMessage, UserMessage
 
 from models.presentation_layout import SlideLayoutModel
@@ -248,7 +248,8 @@ async def get_slide_content_from_type_and_outline(
         response_format = JSONSchemaResponse(
             name="response",
             json_schema=response_schema,
-            strict=True,
+            # Template schemas keep optional fields and content length limits.
+            strict=False,
         )
         messages = get_messages(
             outline.content,

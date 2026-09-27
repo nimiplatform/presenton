@@ -4,6 +4,7 @@ import {
   readReadableLocalFile,
 } from '@/lib/readable-local-file';
 import { authStatusForRequest } from '@/lib/server-auth-role';
+import { requireBackendState } from '@/lib/nimi-server';
 
 export async function POST(request: Request) {
   try {
@@ -15,6 +16,7 @@ export async function POST(request: Request) {
     const content = readReadableLocalFile(filePath, {
       userId: auth.user_id,
       isAdmin: auth.role === 'admin',
+      dataDirectory: requireBackendState(request.headers).dataDirectory,
     });
     return NextResponse.json({ content });
   } catch (error) {

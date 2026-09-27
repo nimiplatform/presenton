@@ -2,6 +2,7 @@ import asyncio
 import copy
 from datetime import datetime
 import json
+import os
 import logging
 import random
 import re
@@ -95,7 +96,6 @@ from utils.process_slides import (
 from utils.icon_weights import DEFAULT_ICON_TYPE, extract_icon_type_from_settings
 from utils.llm_utils import TextGenerationMetrics, message_content_to_text
 from utils.sse import safe_sse_stream
-from api.v1.auth.config import SESSION_COOKIE_NAME
 from utils.web_search import get_selected_web_search_provider, get_web_search_route
 from utils.web_search import build_web_search_query, get_web_search_context
 from api.v1.auth.context import (
@@ -1458,21 +1458,8 @@ async def _resolve_prepare_layout(
 
 
 def build_export_cookie_header(request: Request) -> Optional[str]:
-    cookie_header = (request.headers.get("cookie") or "").strip()
-    if cookie_header:
-        return cookie_header
-
-    internal_session_token = getattr(
-        request.state, "internal_session_token", None
-    )
-    if isinstance(internal_session_token, str) and internal_session_token:
-        return f"{SESSION_COOKIE_NAME}={internal_session_token}"
-
-    session_token = request.cookies.get(SESSION_COOKIE_NAME)
-    if session_token:
-        return f"{SESSION_COOKIE_NAME}={session_token}"
-
-    return None
+    # This worker's immutable business scope is independent of browser accounts.
+    return f"presenton_session={os.environ['PRESENTON_HOST_KEY']}"
 
 
 @PRESENTATION_ROUTER.get("/all", response_model=List[PresentationWithSlides])
@@ -2308,19 +2295,15 @@ async def stream_presentation(
         for i, slide_layout_index in enumerate(structure.slides):
             slide_layout = layout.slides[slide_layout_index]
 
-            try:
-                slide_content = await get_slide_content_from_type_and_outline(
-                    slide_layout,
-                    outline.slides[i],
-                    presentation.language,
-                    presentation.tone,
-                    presentation.verbosity,
-                    presentation.instructions,
-                    slide_number=i + 1,
-                )
-            except HTTPException as e:
-                yield SSEErrorResponse(detail=e.detail).to_string()
-                return
+            slide_content = await get_slide_content_from_type_and_outline(
+                slide_layout,
+                outline.slides[i],
+                presentation.language,
+                presentation.tone,
+                presentation.verbosity,
+                presentation.instructions,
+                slide_number=i + 1,
+            )
 
             slide = SlideModel(
                 presentation=id,

@@ -115,7 +115,7 @@ export const usePresentationStreaming = (
   presentationId: string,
   stream: string | null,
   setLoading: (loading: boolean) => void,
-  setError: (error: boolean) => void,
+  setError: (error: boolean | string) => void,
   fetchUserSlides: (options?: {
     clearHistory?: boolean;
   }) => void | Promise<unknown>,
@@ -166,6 +166,7 @@ export const usePresentationStreaming = (
       description: string,
       options: { showToast?: boolean } = {}
     ) => {
+      if (isClosed) return;
       if (isSmartMode && !smartGenerationOutcomeTracked) {
         smartGenerationOutcomeTracked = true;
         trackEvent(MixpanelEvent.Smart_Mode_Generation_Failed, {
@@ -189,7 +190,7 @@ export const usePresentationStreaming = (
       clearRetryTimer();
       setLoading(false);
       dispatch(setStreaming(false));
-      setError(true);
+      setError(description);
       if (options.showToast !== false) {
         notify.error("Presentation streaming failed", description);
       }
@@ -302,6 +303,7 @@ export const usePresentationStreaming = (
       );
 
       eventSource.addEventListener("response", async (event) => {
+        if (isClosed) return;
         let data: PresentationStreamData;
         try {
           data = JSON.parse(event.data) as PresentationStreamData;
@@ -680,6 +682,7 @@ export const usePresentationStreaming = (
       });
 
       eventSource.onerror = (error) => {
+        if (isClosed) return;
         console.error("EventSource failed:", error);
         if (!scheduleRetry("connection lost")) {
           finalizeFailure("Failed to connect to the server. Please try again.");
@@ -688,6 +691,7 @@ export const usePresentationStreaming = (
     };
 
     const startStream = async () => {
+      setError(false);
       dispatch(setStreaming(true));
       dispatch(clearPresentationData());
       latestGenerationMetrics = null;

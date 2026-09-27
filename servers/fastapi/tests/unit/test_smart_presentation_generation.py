@@ -136,62 +136,10 @@ def test_smart_retry_prompt_includes_layout_validation_feedback():
     assert "Slide content uses overflow-y-auto" in prompt
 
 
-def test_smart_reasoning_uses_low_effort_for_openai(monkeypatch):
-    monkeypatch.setattr(
-        "utils.llm_calls.generate_smart_presentation.disable_thinking",
-        lambda: False,
-    )
-    monkeypatch.setattr(
-        "utils.llm_calls.generate_smart_presentation.get_llm_provider",
-        lambda: LLMProvider.OPENAI,
-    )
-    monkeypatch.setattr(
-        "utils.llm_calls.generate_smart_presentation.llmai.supports_thinking",
-        lambda model, provider=None: True,
-    )
-
-    reasoning, supports_thinking = get_smart_reasoning_config("gpt-5")
-
-    assert supports_thinking is True
-    assert reasoning is not None
-    assert reasoning.enabled is True
-    assert reasoning.effort == ReasoningEffortValue.LOW
-
-
-def test_smart_reasoning_respects_disable_thinking(monkeypatch):
-    monkeypatch.setattr(
-        "utils.llm_calls.generate_smart_presentation.disable_thinking",
-        lambda: True,
-    )
-
-    reasoning, supports_thinking = get_smart_reasoning_config("gpt-5")
-
-    assert reasoning is None
-    assert supports_thinking is False
-
-
-def test_smart_explicit_reasoning_overrides_legacy_disable(monkeypatch):
-    monkeypatch.setattr(
-        "utils.llm_calls.generate_smart_presentation.disable_thinking",
-        lambda: True,
-    )
-    monkeypatch.setattr(
-        "utils.llm_calls.generate_smart_presentation.has_explicit_reasoning_settings",
-        lambda: True,
-    )
-    monkeypatch.setattr(
-        "utils.llm_calls.generate_smart_presentation.get_llm_provider",
-        lambda: LLMProvider.OPENAI,
-    )
-    monkeypatch.setattr(
-        "utils.llm_calls.generate_smart_presentation.llmai.supports_thinking",
-        lambda model, provider=None: True,
-    )
-
-    reasoning, supports_thinking = get_smart_reasoning_config("gpt-5")
-
-    assert reasoning is None
-    assert supports_thinking is True
+def test_smart_reasoning_leaves_provider_defaults_with_nimi():
+    # A provider-looking model name must not select or invent reasoning controls.
+    for model in ("text.generate", "gpt-5", "local-model"):
+        assert get_smart_reasoning_config(model) == (None, False)
 
 
 def test_smart_stream_separates_thinking_and_reports_exact_usage(monkeypatch):

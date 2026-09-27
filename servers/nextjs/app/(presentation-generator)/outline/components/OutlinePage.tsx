@@ -282,6 +282,7 @@ const OutlinePage: React.FC = () => {
       dispatch(setPptGenUploadState({ config: draftConfig, files }));
       dispatch(clearOutlines());
       dispatch(setPresentationId(createResponse.id));
+      router.replace(`/outline?id=${encodeURIComponent(createResponse.id)}`);
       trackEvent(MixpanelEvent.TemplateV2_Outline_Regeneration_Completed, {
         old_presentation_id: presentation_id,
         new_presentation_id: createResponse.id,
@@ -316,6 +317,7 @@ const OutlinePage: React.FC = () => {
     isOutlineReady,
     outlineControlsBusy,
     presentation_id,
+    router,
     selectedTemplateId,
   ]);
 

@@ -2,6 +2,7 @@ from enum import Enum
 
 
 class LLMProvider(Enum):
+    NIMI = "nimi"
     OLLAMA = "ollama"
     DEEPSEEK = "deepseek"
     OPENAI = "openai"

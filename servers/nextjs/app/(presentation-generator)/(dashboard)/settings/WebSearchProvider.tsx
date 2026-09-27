@@ -26,7 +26,6 @@ const EXTERNAL_WEB_SEARCH_OPTIONS = [
   "searxng",
 ] as const;
 const WEB_SEARCH_PROVIDER_OPTIONS = [
-  WEB_SEARCH_PROVIDERS.auto,
   ...EXTERNAL_WEB_SEARCH_OPTIONS.map((value) => WEB_SEARCH_PROVIDERS[value]),
 ];
 
@@ -67,7 +66,7 @@ const WebSearchProvider = ({
         ...current,
         WEB_GROUNDING: checked,
         ...(checked && !hasValidProvider
-          ? { WEB_SEARCH_PROVIDER: "auto" }
+          ? { WEB_SEARCH_PROVIDER: "searxng" }
           : {}),
       };
     });

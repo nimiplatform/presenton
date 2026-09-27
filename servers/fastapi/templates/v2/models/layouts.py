@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Annotated, Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic.json_schema import GenerateJsonSchema
 
 from utils.icon_weights import IconType
 
@@ -783,9 +784,18 @@ class TextCapacityPlan(BaseModel):
         return self
 
 
+class TemplateJsonSchema(GenerateJsonSchema):
+    def tagged_union_schema(self, schema):
+        result = super().tagged_union_schema(schema)
+        # JSON Schema retains oneOf and tag const values. The OpenAPI-only
+        # discriminator annotation is unnecessary for model output validation.
+        result.pop("discriminator", None)
+        return result
+
+
 def slide_layout_llm_json_schema() -> dict:
     """Return the SlideLayout output schema with LLM-only string length hints."""
-    schema = SlideLayout.model_json_schema()
+    schema = SlideLayout.model_json_schema(schema_generator=TemplateJsonSchema)
 
     def add_length_hints(properties: dict) -> None:
         properties["id"].update(minLength=1, maxLength=80)

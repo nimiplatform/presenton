@@ -1,3 +1,4 @@
+import { requireBackendState } from '@/lib/nimi-server';
 import fs from "fs";
 import fsPromises from "fs/promises";
 import path from "path";
@@ -11,8 +12,7 @@ const CONTENT_TYPES: Record<string, string> = {
   ".zip": "application/zip",
 };
 
-function getExportsDirectory(): string {
-  const appDataDirectory = process.env.APP_DATA_DIRECTORY?.trim();
+function getExportsDirectory(appDataDirectory: string): string {
   if (!appDataDirectory) {
     throw new Error("APP_DATA_DIRECTORY is required to download exported files.");
   }
@@ -70,7 +70,7 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const exportsDirectory = getExportsDirectory();
+    const exportsDirectory = getExportsDirectory(requireBackendState(request.headers).dataDirectory);
     const resolvedExportsDirectory = await fsPromises.realpath(exportsDirectory);
     const filePath = path.join(exportsDirectory, filename);
     const resolvedFilePath = await fsPromises.realpath(filePath);
@@ -84,6 +84,7 @@ export async function GET(request: NextRequest) {
 
     const ext = path.extname(resolvedFilePath).toLowerCase();
     const stats = await fsPromises.stat(resolvedFilePath);
+    requireBackendState(request.headers);
     const stream = Readable.toWeb(fs.createReadStream(resolvedFilePath));
     return new NextResponse(stream as unknown as BodyInit, {
       headers: {

@@ -107,7 +107,7 @@ def test_outline_schema_describes_audience_facing_content_only():
     assert "never slide-creation commands" in content_schema["description"]
 
 
-def test_generate_ppt_outline_default_openai_uses_native_search_tool(monkeypatch):
+def test_nimi_outline_does_not_fall_back_to_provider_native_search(monkeypatch):
     captured_kwargs = {}
     captured_config_kwargs = {}
 
@@ -148,9 +148,8 @@ def test_generate_ppt_outline_default_openai_uses_native_search_tool(monkeypatch
             )
         )
 
-    assert captured_config_kwargs == {"use_openai_responses_api": True}
-    assert len(captured_kwargs["tools"]) == 1
-    assert isinstance(captured_kwargs["tools"][0], WebSearchTool)
+    assert captured_config_kwargs == {"use_openai_responses_api": False}
+    assert not captured_kwargs["tools"]
     assert captured_kwargs["disconnect_checker"] is is_disconnected
 
 

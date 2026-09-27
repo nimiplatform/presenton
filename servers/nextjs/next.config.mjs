@@ -6,10 +6,21 @@ const isElectronBuild = process.env.PRESENTON_ELECTRON_BUILD === "true";
 
 const nextConfig = {
   reactStrictMode: false,
-  distDir: ".next-build",
+  distDir: process.env.NODE_ENV === "production" ? ".next-production" : ".next-build",
   output: "standalone",
+  outputFileTracingRoot: path.resolve(nextjsRoot, "../.."),
+  // Next traces pnpm's hoisted semver alias without its target package. Include
+  // the installed target so the standalone server has no dangling dependency.
+  outputFileTracingIncludes: {
+    "/*": ["../../node_modules/.pnpm/semver@*/node_modules/semver/**/*"],
+  },
+  async headers() {
+    // Sandboxed template previews have an opaque origin. These bundled fonts
+    // are public assets; business data and APIs keep their Host access checks.
+    return [{ source: "/vendor/fonts/:path*", headers: [{ key: "Access-Control-Allow-Origin", value: "*" }] }];
+  },
   turbopack: {
-    root: nextjsRoot,
+    root: path.resolve(nextjsRoot, "../.."),
   },
   ...(process.env.NODE_ENV !== "production"
     ? {

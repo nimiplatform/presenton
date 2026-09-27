@@ -19,7 +19,7 @@ import {
 export const usePresentationData = (
   presentationId: string,
   setLoading: (loading: boolean) => void,
-  setError: (error: boolean) => void
+  setError: (error: boolean | string) => void
 ) => {
   const dispatch = useDispatch();
   const router = useRouter();
@@ -44,7 +44,9 @@ export const usePresentationData = (
 
 
       if (normalizedData) {
-        const templateId = resolveTemplateIdFromPresentation(normalizedData);
+        const templateId = normalizedData.generation_mode === "smart"
+          ? null
+          : resolveTemplateIdFromPresentation(normalizedData);
         const responseTheme = normalizeTemplateTheme(normalizedData.theme);
         const fetchedTheme = templateId
           ? await TemplateService.getTemplateTheme(templateId)

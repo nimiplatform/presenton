@@ -2,6 +2,7 @@ from fastapi import HTTPException
 from openai import APIError as OpenAIAPIError
 from google.genai.errors import APIError as GoogleAPIError
 import traceback
+from services.nimi_channel import NimiCallError
 
 from enums.llm_provider import LLMProvider
 from llmai.shared.errors import BaseError as LLMAIBaseError
@@ -34,6 +35,17 @@ def _chatgpt_auth_required_exception(message: object) -> HTTPException:
 
 def handle_llm_client_exceptions(e: Exception) -> HTTPException:
     traceback.print_exc()
+    if isinstance(e, NimiCallError):
+        explanation = {
+            "ai-config-not-found": "Choose models for Presenton in Settings → AI models before generating content.",
+            "ai-connector-not-found": "The selected Nimi connection no longer exists. Select its current connection in Settings → AI models.",
+            "ai-provider-auth-failed": "The model connection needs authorization in Nimi Cloud Services.",
+            "ai-text-behavior-unsupported": "The selected Nimi model does not support this request. Choose a model with the required structured output, tools or image input in Settings → AI models.",
+        }.get(e.reason_code, str(e))
+        error = HTTPException(status_code=422, detail=explanation)
+        error.retryable = e.retryable
+        error.error_type = e.reason_code
+        return error
     if isinstance(e, HTTPException):
         if _is_codex_provider() and e.status_code in {401, 403}:
             return _chatgpt_auth_required_exception(e.detail)

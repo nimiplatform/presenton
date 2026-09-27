@@ -238,9 +238,9 @@ async function ensureTelemetryStatus(): Promise<boolean> {
         window.__mixpanel_telemetry_enabled = enabled;
         return enabled;
       } catch {
-        // If the API call fails, default to enabling tracking
-        window.__mixpanel_telemetry_enabled = true;
-        return true;
+        // Unavailable privacy settings cannot enable telemetry.
+        window.__mixpanel_telemetry_enabled = false;
+        return false;
       }
     })();
   }

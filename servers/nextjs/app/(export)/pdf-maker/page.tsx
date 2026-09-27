@@ -9,7 +9,6 @@ const page = () => {
     const router = useRouter();
     const params = useSearchParams();
     const queryId = params.get("id");
-    const exportCookie = params.get("exportCookie") ?? undefined;
     if (!queryId) {
         return (
             <div className="flex flex-col items-center justify-center h-screen">
@@ -20,7 +19,7 @@ const page = () => {
         );
     }
     return (
-        <PdfMakerPage presentation_id={queryId} exportCookie={exportCookie} />
+        <PdfMakerPage presentation_id={queryId} />
     );
 };
 export default page;

@@ -8,7 +8,7 @@ import re
 from dataclasses import dataclass, field
 from typing import Any
 
-from llmai import get_client
+from services.nimi_llm import get_client
 from llmai.shared import SystemMessage, UserMessage
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -297,7 +297,6 @@ def select_theme_roles_with_llm(profile: ThemeProfile) -> ThemeRoleSelection:
         response_name="TemplateThemeRoleSelection",
         validation_retries=2,
         extra_validator=validate_ids,
-        max_tokens=2000,
     )
     return ThemeRoleSelection.model_validate(payload)
 

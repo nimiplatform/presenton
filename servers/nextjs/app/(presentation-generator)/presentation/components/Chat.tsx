@@ -503,7 +503,7 @@ const Chat = ({
   );
   const selectedTextModel =
     getSelectedTextModel(llmConfig)?.trim() ||
-    LLM_PROVIDERS[llmConfig.LLM || "openai"]?.label ||
+    LLM_PROVIDERS[llmConfig.LLM || "nimi"]?.label ||
     llmConfig.LLM ||
     "AI model";
   const chatHtmlSelection = useSelector(

@@ -35,3 +35,13 @@ servers/fastapi/dist/
 servers/fastapi/fastembed_cache/
 servers/fastapi/*.egg-info/
 pptxcollection/
+.nimi/local/
+dist-electron/
+dist-electron-package/
+dist/nimi-app/
+!/.agents/
+!/.agents/**
+
+resources/presenton-worker/
+
+.next-production/

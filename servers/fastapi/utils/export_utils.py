@@ -32,8 +32,6 @@ def _build_presentation_export_url(
     if fastapi_url:
         params["fastapiUrl"] = fastapi_url
     export_url = f"{_get_next_public_url().rstrip('/')}/pdf-maker?{urlencode(params)}"
-    if cookie_header:
-        export_url = f"{export_url}#{urlencode({'exportCookie': cookie_header})}"
     return (
         export_url,
         fastapi_url,
@@ -61,7 +59,7 @@ async def export_presentation(
         title=safe_export_basename(sanitize_filename(name)),
         export_as=export_as,
         fastapi_url=fastapi_url,
-        cookie_header=cookie_header,
+        cookie_header=cookie_header or f"presenton_session={os.environ['PRESENTON_HOST_KEY']}",
     )
     log_memory(
         LOGGER,

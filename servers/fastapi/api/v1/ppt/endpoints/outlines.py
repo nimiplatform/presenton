@@ -92,6 +92,17 @@ async def stream_outlines(
     if not presentation:
         raise HTTPException(status_code=404, detail="Presentation not found")
 
+    # Reopening a draft restores its committed outline. Explicit regeneration
+    # creates a new presentation ID; reconnecting must not rerun paid AI work.
+    if presentation.outlines:
+        async def saved_outline():
+            if not await request.is_disconnected():
+                yield SSECompleteResponse(
+                    key="presentation", value=presentation.model_dump(mode="json")
+                ).to_string()
+
+        return StreamingResponse(saved_outline(), media_type="text/event-stream")
+
     search_route, actual_search_provider = get_web_search_route()
     LOGGER.info(
         "Starting outline stream: presentation_id=%s web_search_enabled=%s "
@@ -194,7 +205,7 @@ async def stream_outlines(
                 continue
 
             if isinstance(chunk, HTTPException):
-                yield SSEErrorResponse(detail=chunk.detail).to_string()
+                yield SSEErrorResponse(detail=str(chunk.detail), retryable=getattr(chunk, "retryable", None), error_type=getattr(chunk, "error_type", None)).to_string()
                 return
 
             yield SSEResponse(

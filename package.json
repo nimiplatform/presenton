@@ -1,6 +1,7 @@
 {
   "name": "presenton",
-  "version": "0.9.11-beta",
+  "version": "0.9.11-beta.2",
+  "license": "Apache-2.0",
   "presentationExportVersion": "v1.0.34",
   "type": "module",
   "description": "Open-source AI presentation generator",
@@ -11,10 +12,41 @@
     "test:template-converter": "node --test scripts/convert-template.test.mjs scripts/convert-presentation-template.test.mjs",
     "sync:presentation-export": "node scripts/sync-presentation-export.cjs",
     "sync:presentation-export:force": "node scripts/sync-presentation-export.cjs --force",
-    "check:presentation-export": "node scripts/sync-presentation-export.cjs --check-only"
+    "check:presentation-export": "node scripts/sync-presentation-export.cjs --check-only",
+    "test:upstream": "npm run test:template-converter && node --test scripts/package-metadata.test.mjs scripts/sync-presentation-export.test.mjs",
+    "postinstall": "install-electron --no",
+    "dev:renderer": "pnpm --dir servers/nextjs exec next dev --hostname 127.0.0.1 --port 6016",
+    "build:electron": "node scripts/build-nimi-electron.mjs",
+    "test:app": "node --import tsx --test scripts/nimi-host.test.mjs && pnpm run test:template-converter",
+    "build:electron:production": "node scripts/build-nimi-production.mjs",
+    "build:electron:macos": "node scripts/build-nimi-production.mjs",
+    "dev": "nimi-app dev --shell electron",
+    "dev:shell": "nimi-app dev",
+    "dev:electron": "nimi-app dev --shell electron",
+    "sync": "nimi-app sync",
+    "pack": "nimi-app pack",
+    "setup:backend": "uv sync --project servers/fastapi --python 3.11 --group dev",
+    "setup:export": "pnpm sync:presentation-export && node electron/scripts/prepare-export-chromium.cjs"
   },
   "dependencies": {
     "@llamaindex/liteparse": "^1.5.2",
-    "sharp": "^0.34.5"
-  }
+    "sharp": "^0.34.5",
+    "@nimiplatform/sdk": "^0.19.0",
+    "@nimiplatform/kit": "^0.16.0"
+  },
+  "packageManager": "pnpm@10.34.5",
+  "private": true,
+  "devDependencies": {
+    "electron": "^42.10.1",
+    "esbuild": "^0.28.2",
+    "typescript": "^5.9.3",
+    "tsx": "^4.23.13",
+    "@types/node": "^24.13.3",
+    "@electron/packager": "^20.3.0",
+    "yaml": "^2.9.0",
+    "@nimiplatform/app-tools": "^0.11.4",
+    "@nimiplatform/nimi-coding": "0.6.3",
+    "@puppeteer/browsers": "^3.0.3"
+  },
+  "main": "dist-electron/main.js"
 }

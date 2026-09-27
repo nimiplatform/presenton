@@ -2,11 +2,10 @@
 
 import { Provider } from 'react-redux';
 import { store } from '../store/store';
-import ChatGptAuthRedirectHandler from './ChatGptAuthRedirectHandler';
+import NimiSessionBoundary from '@/components/NimiSessionBoundary';
 
 export function Providers({ children }: { children: React.ReactNode }) {
   return <Provider store={store}>
-      <ChatGptAuthRedirectHandler />
-      {children}
+      <NimiSessionBoundary>{children}</NimiSessionBoundary>
   </Provider>;
 }

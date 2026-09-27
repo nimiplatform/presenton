@@ -109,6 +109,7 @@ export const useOutlineStreaming = (
       );
 
       eventSource.addEventListener("response", (event) => {
+        if (isClosed) return;
         let data: any;
         try {
           data = JSON.parse(event.data);
@@ -208,6 +209,15 @@ export const useOutlineStreaming = (
             break;
 
           case "error":
+            if (data.retryable === false) {
+              isClosed = true;
+              dispatch(setOutlines([]));
+              resetStreamingState();
+              closeEventSource();
+              clearRetryTimer();
+              notify.error("Outline generation stopped", data.detail || "Check the AI model settings and try again.");
+              break;
+            }
             if (isChatGptAuthRequiredMessage(data.detail)) {
               resetStreamingState();
               closeEventSource();
@@ -218,6 +228,8 @@ export const useOutlineStreaming = (
               break;
             }
             if (!scheduleRetry(data.detail || "server returned stream error")) {
+              isClosed = true;
+              dispatch(setOutlines([]));
               resetStreamingState();
               closeEventSource();
               notify.error(
@@ -231,7 +243,10 @@ export const useOutlineStreaming = (
       });
 
       eventSource.onerror = () => {
+        if (isClosed) return;
         if (!scheduleRetry("connection lost")) {
+          isClosed = true;
+          dispatch(setOutlines([]));
           resetStreamingState();
           closeEventSource();
           notify.error(

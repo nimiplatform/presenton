@@ -1,5 +1,5 @@
+import { readBackendState, requireBackendState } from '@/lib/nimi-server';
 import path from "path";
-import os from "os";
 import fs from "fs/promises";
 import { spawn } from "child_process";
 import { sanitizeFilename } from "@/app/(presentation-generator)/utils/others";
@@ -21,19 +21,6 @@ export function getPresentonAppRoot(): string {
     process.env.PRESENTON_APP_ROOT?.trim() ||
     path.join(process.cwd(), "..", "..")
   );
-}
-
-function extractSessionTokenFromCookieHeader(cookieHeader?: string): string | undefined {
-  if (!cookieHeader) {
-    return undefined;
-  }
-
-  const match = cookieHeader.match(/(?:^|;\s*)presenton_session=([^;]+)/);
-  if (!match?.[1]) {
-    return undefined;
-  }
-
-  return decodeURIComponent(match[1]);
 }
 
 async function resolveExportEntrypoint(exportRoot: string): Promise<string> {
@@ -75,9 +62,9 @@ export function normalizeExportFileUrlPathname(
 function normalizeExportOutputPath(params: {
   pathValue?: string;
   urlValue?: string;
+  appData: string;
 }): string {
-  const { pathValue, urlValue } = params;
-  const appData = process.env.APP_DATA_DIRECTORY?.trim();
+  const { pathValue, urlValue, appData } = params;
 
   const resolveAppDataRelative = (value: string): string => {
     if (!appData) {
@@ -150,28 +137,24 @@ async function runBundledPresentationExportLocked(params: {
   cookieHeader?: string;
 }): Promise<BundledPresentationExportResult> {
   const { presentationId, title, format, cookieHeader } = params;
+  const state = requireBackendState(new Headers({ cookie: cookieHeader || "" }));
+  if (!state.exportExecutable) throw new Error('Presenton export browser is unavailable. Run pnpm setup:export.');
+  await fs.access(state.exportExecutable);
   const exportRoot = getExportPackageRoot();
   const entrypoint = await resolveExportEntrypoint(exportRoot);
   const appRoot = getPresentonAppRoot();
 
   const nextjsUrl =
-    process.env.NEXT_PUBLIC_URL?.trim() || "http://127.0.0.1";
+    state.rendererOrigin;
   const q = new URLSearchParams({ id: presentationId, format });
-  const sessionToken = extractSessionTokenFromCookieHeader(cookieHeader);
-  if (sessionToken) {
-    q.set("exportSession", sessionToken);
-  }
-  const fastapiUrl = process.env.NEXT_PUBLIC_FAST_API?.trim();
+  const fastapiUrl = state.rendererOrigin;
   if (fastapiUrl) {
     q.set("fastapiUrl", fastapiUrl);
   }
-  const basePptUrl = `${nextjsUrl}/pdf-maker?${q.toString()}`;
-  const pptUrl = cookieHeader?.trim()
-    ? `${basePptUrl}#exportCookie=${encodeURIComponent(cookieHeader)}`
-    : basePptUrl;
+  const pptUrl = `${nextjsUrl}/pdf-maker?${q.toString()}`;
 
   const tempBase =
-    process.env.TEMP_DIRECTORY?.trim() || path.join(os.tmpdir(), "presenton");
+    path.join(state.dataDirectory, 'tmp');
   await fs.mkdir(tempBase, { recursive: true });
   const workDir = await fs.mkdtemp(path.join(tempBase, "export-"));
   const exportTaskPath = path.join(workDir, "export_task.json");
@@ -186,7 +169,7 @@ async function runBundledPresentationExportLocked(params: {
   };
 
   try {
-    await fs.writeFile(exportTaskPath, JSON.stringify(exportTask), "utf8");
+    await fs.writeFile(exportTaskPath, JSON.stringify(exportTask), { encoding: "utf8", mode: 0o600 });
 
     const responsePath = exportTaskPath.replace(/\.json$/i, ".response.json");
 
@@ -199,14 +182,19 @@ async function runBundledPresentationExportLocked(params: {
       const child = spawn(process.execPath, [entrypoint, exportTaskPath], {
         cwd: appRoot,
         stdio: ["ignore", "pipe", "pipe"],
-        env: process.env,
+        env: exportEnvironment(state),
       });
       const stderr = new BoundedTextBuffer();
       const stdout = new BoundedTextBuffer();
       const onStderrData = (d: Buffer) => stderr.append(d);
       const onStdoutData = (d: Buffer) => stdout.append(d);
       let settled = false;
+      const scopeTimer = setInterval(() => {
+        try { if (readBackendState().key === state.key) return; } catch { /* Host unavailable */ }
+        child.kill('SIGTERM');
+      }, 500);
       const cleanup = () => {
+        clearInterval(scopeTimer);
         child.stderr?.removeListener("data", onStderrData);
         child.stdout?.removeListener("data", onStdoutData);
         child.removeListener("error", onError);
@@ -249,11 +237,13 @@ async function runBundledPresentationExportLocked(params: {
     });
 
     const responseRaw = await fs.readFile(responsePath, "utf8");
+    requireBackendState(new Headers({ cookie: cookieHeader || "" }));
     const responseData = JSON.parse(responseRaw) as { path?: string; url?: string };
 
     const outPath = normalizeExportOutputPath({
       pathValue: responseData?.path,
       urlValue: responseData?.url,
+      appData: state.dataDirectory,
     });
 
     await ensureExportFileReadable(outPath);
@@ -267,4 +257,10 @@ async function runBundledPresentationExportLocked(params: {
   } finally {
     await fs.rm(workDir, { recursive: true, force: true }).catch(() => {});
   }
+}
+
+function exportEnvironment(state: ReturnType<typeof readBackendState>): NodeJS.ProcessEnv {
+  const env: NodeJS.ProcessEnv = { NODE_ENV: 'production', APP_DATA_DIRECTORY: state.dataDirectory, TEMP_DIRECTORY: path.join(state.dataDirectory, 'tmp'), NEXT_PUBLIC_FAST_API: state.rendererOrigin, ELECTRON_RUN_AS_NODE: '1', PUPPETEER_EXECUTABLE_PATH: state.exportExecutable };
+  for (const key of ['PATH', 'SystemRoot', 'WINDIR', 'LANG', 'TEMP', 'TMP', 'TMPDIR', 'PUPPETEER_CACHE_DIR']) if (process.env[key]) env[key] = process.env[key];
+  return env;
 }

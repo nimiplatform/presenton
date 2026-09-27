@@ -1,109 +1,13 @@
-import { NextResponse } from "next/server";
-import { getFastApiBaseUrl } from "@/lib/fastapi-internal";
-import {
-  authStatusForRequest,
-  requireAdminApi,
-} from "@/lib/server-auth-role";
-import { readRuntimeProviderConfig } from "@/lib/runtime-provider-config";
-
-const canChangeKeys = process.env.CAN_CHANGE_KEYS !== "false";
-
-function immutableResponse() {
-  return NextResponse.json(
-    { error: "You are not allowed to access this resource", status: 403 },
-    { status: 403 }
-  );
-}
-
-async function forwardProviderSettings(
-  request: Request,
-  method: "GET" | "PUT",
-  body?: string
-) {
-  const cookie = request.headers.get("cookie") || "";
-  const response = await fetch(
-    `${getFastApiBaseUrl()}/api/v1/admin/provider-settings`,
-    {
-      method,
-      headers: {
-        ...(cookie ? { cookie } : {}),
-        ...(body ? { "content-type": "application/json" } : {}),
-      },
-      body,
-      cache: "no-store",
-    }
-  );
-  const payload = await response.text();
-  return new NextResponse(payload || null, {
-    status: response.status,
-    headers: {
-      "content-type":
-        response.headers.get("content-type") || "application/json",
-    },
-  });
-}
-
-export async function GET(request: Request) {
-  const auth = await authStatusForRequest(request);
-  if (!auth.authenticated) {
-    return NextResponse.json({ detail: "Unauthorized" }, { status: 401 });
-  }
-
-  // Administrators need the real values in the settings forms. Regular users
-  // only need the effective provider/model selection; shared secrets must
-  // never be sent to their browser.
-  if (auth.role !== "admin" || !canChangeKeys) {
-    try {
-      return NextResponse.json(readRuntimeProviderConfig().config);
-    } catch {
-      return NextResponse.json(
-        { error: "Unable to read provider settings", status: 500 },
-        { status: 500 }
-      );
-    }
-  }
-
+import { NextResponse } from 'next/server';
+import { requireBackendState } from '@/lib/nimi-server';
+async function forward(request: Request, method: 'GET' | 'PUT') {
   try {
-    return await forwardProviderSettings(request, "GET");
-  } catch {
-    return NextResponse.json(
-      { error: "Unable to read provider settings", status: 500 },
-      { status: 500 }
-    );
-  }
+    const state = requireBackendState(request.headers);
+    const response = await fetch(`${state.origin}/api/v1/ppt/business-settings`, { method,
+      headers: { 'X-Presenton-Host': state.key, 'Content-Type': 'application/json' },
+      ...(method === 'PUT' ? { body: await request.text() } : {}), cache: 'no-store' });
+    return new NextResponse(await response.text(), { status: response.status, headers: { 'Content-Type': 'application/json' } });
+  } catch { return NextResponse.json({ detail: 'Presenton Host unavailable' }, { status: 401 }); }
 }
-
-export async function POST(request: Request) {
-  const denied = await requireAdminApi(request);
-  if (denied) return denied;
-  if (!canChangeKeys) return immutableResponse();
-
-  try {
-    const body = await request.text();
-    if (!body.trim()) {
-      return NextResponse.json(
-        { error: "Invalid user config JSON body", status: 400 },
-        { status: 400 }
-      );
-    }
-    const parsed = JSON.parse(body) as unknown;
-    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
-      return NextResponse.json(
-        { error: "Invalid user config JSON body", status: 400 },
-        { status: 400 }
-      );
-    }
-    return await forwardProviderSettings(request, "PUT", body);
-  } catch (error) {
-    if (error instanceof SyntaxError) {
-      return NextResponse.json(
-        { error: "Invalid user config JSON body", status: 400 },
-        { status: 400 }
-      );
-    }
-    return NextResponse.json(
-      { error: "Unable to save provider settings", status: 500 },
-      { status: 500 }
-    );
-  }
-}
+export const GET = (request: Request) => forward(request, 'GET');
+export const POST = (request: Request) => forward(request, 'PUT');

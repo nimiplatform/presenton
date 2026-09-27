@@ -1,0 +1,40 @@
+app_id: io.github.nimiplatform.presenton
+display_name: Presenton
+version: 0.9.11-beta.2
+profile: standalone
+npm_package_name: presenton
+cargo_package_name: presenton-shell
+tauri_identifier: ai.nimi.apps.io.github.nimiplatform.presenton
+package_author: null
+submission_role: developer-submitted-input
+capability_contract_refs:
+  - text.generate
+  - image.generate
+  - text.embed
+required_standardized_feature_refs: []
+storage_policy:
+  kind: app-owned-os-storage
+  os_storage_disclosure:
+    - path_pattern: ~/Library/Application Support/Presenton Nimi/workspaces/
+      purpose: Presentation databases, templates, uploaded documents, generated images and document retrieval caches, partitioned by the Nimi-managed App workspace identifier
+      expected_size_band: 10 MB–10 GB depending on imported media
+    - path_pattern: User-selected download destinations
+      purpose: Exported PDF and PPTX presentations
+      expected_size_band: Up to hundreds of MB per presentation
+support_manifest:
+  diagnostics_bundle_fields:
+    - app_version
+    - runtime_status
+  redaction_rules:
+    - credentials
+  user_visible_issue_categories:
+    - startup
+    - runtime
+  escalation_path: README.md#support
+  kill_switch_visibility: visible
+  recovery_instructions: Restart the App from Nimi. If the problem persists, reinstall the current admitted release.
+review_inputs:
+  manifest: nimi.app.yaml
+  build_profile: .nimi/config/build-profile.yaml
+  scaffold_boundary: .nimi/contracts/scaffold-boundary.yaml
+admission_truth: platform-owned-after-review

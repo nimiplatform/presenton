@@ -303,6 +303,7 @@ async function main() {
     return;
   }
   if (existing.ok && !forceInstall) {
+    fs.copyFileSync(sourceRunner, targetRunner);
     console.log(`[presentation-export] Using export-core ${existing.packageVersion}`);
     return;
   }

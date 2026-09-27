@@ -118,7 +118,7 @@ export default function OnboardingPresentonAccount({
 
     // Electron denies child windows and sends http(s) targets to the system
     // browser. Do not ask it to open the unsupported about:blank placeholder.
-    const isElectron = Boolean(window.electron);
+    const isElectron = Boolean(window.presentonHost);
     const approvalWindow = isElectron
       ? null
       : window.open("about:blank", "_blank");
@@ -366,7 +366,7 @@ export default function OnboardingPresentonAccount({
                 {status.linked
                   ? status.email || "Presenton Cloud is ready for this workspace."
                   : status.canManage
-                    ? "Use Presenton as provider for AI Presentations"
+                    ? "Connect for optional community services"
                     : "A workspace administrator must connect Presenton Cloud."}
               </span>
             </span>

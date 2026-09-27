@@ -52,7 +52,12 @@ function buildRunOptions(task, legacyTask) {
   return {
     ...(outputDirectory ? { outputDirectory } : {}),
     ...(tempDirectory ? { tempDirectory } : {}),
-    ...(executablePath ? { browserLaunchOptions: { executablePath } } : {}),
+    ...(executablePath ? { browserLaunchOptions: {
+      executablePath,
+      // macOS can stop display-driven frames while the display is asleep.
+      // Export needs actual compositor frames even without a visible window.
+      args: ["--no-sandbox", "--disable-gpu", "--disable-dev-shm-usage", "--no-zygote", "--no-extensions", "--disable-frame-rate-limit"],
+    } } : {}),
     ...(puppeteerCacheDirectory ? { puppeteerCacheDirectory } : {}),
     ...(urlConfigs ? { urlConfigs } : {}),
     ...(fastapiUrl || process.env.ASSETS_BASE_URL?.trim()
@@ -94,10 +99,11 @@ async function main() {
   } = rawTask;
   task.__taskFilePath = path.resolve(taskPath);
 
-  const response = await runTask(
-    task,
-    buildRunOptions(task, { fastapiUrl, cookieHeader }),
-  );
+  const options = buildRunOptions(task, { fastapiUrl, cookieHeader });
+  // Interrupted exports cannot become successful files after the engine catches
+  // a browser-close error. Closing the pipe also ends this owned browser.
+  process.once("SIGTERM", () => process.exit(143));
+  const response = await runTask(task, options);
   const responsePath = taskPath.replace(/\.json$/i, ".response.json");
   await fs.writeFile(responsePath, JSON.stringify(normalizeResponse(response)), "utf8");
 }

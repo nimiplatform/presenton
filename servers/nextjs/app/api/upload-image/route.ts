@@ -1,3 +1,4 @@
+import { requireBackendState } from '@/lib/nimi-server';
 import { NextRequest, NextResponse } from "next/server";
 import path from "path";
 import fs from "fs";
@@ -13,7 +14,7 @@ export async function POST(request: NextRequest) {
   let filePath: string | undefined;
 
   try {
-    const userDataDir = process.env.APP_DATA_DIRECTORY;
+    const userDataDir = requireBackendState(request.headers).dataDirectory;
     if (!userDataDir) {
       return NextResponse.json(
         { error: "User data directory not found" },
@@ -27,6 +28,7 @@ export async function POST(request: NextRequest) {
 
     const formData = await request.formData();
     const file = formData.get("file") as File;
+    requireBackendState(request.headers);
 
     if (!file) {
       return NextResponse.json(
@@ -58,6 +60,7 @@ export async function POST(request: NextRequest) {
       Readable.fromWeb(file.stream() as unknown as NodeReadableStream<Uint8Array>),
       fs.createWriteStream(filePath)
     );
+    requireBackendState(request.headers);
 
     // Return the relative path that can be used in the frontend
     return NextResponse.json({

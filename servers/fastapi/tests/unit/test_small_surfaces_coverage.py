@@ -380,9 +380,9 @@ def test_image_provider_env_flags_exclusive(monkeypatch, env_provider: str, pred
             assert other() is False
 
 
-def test_get_selected_image_provider_none(monkeypatch):
+def test_get_selected_image_provider_defaults_to_nimi(monkeypatch):
     monkeypatch.delenv("IMAGE_PROVIDER", raising=False)
-    assert get_selected_image_provider() is None
+    assert get_selected_image_provider().value == "nimi"
 
 
 def test_get_selected_image_provider_invalid_env_raises(monkeypatch):
@@ -506,7 +506,8 @@ def test_concurrent_service_runs_tasks(monkeypatch):
     mock_sleep.assert_awaited_once_with(3)
 
 
-def test_export_includes_optional_fastapi_param():
+def test_export_passes_business_cookie_without_putting_it_in_url(monkeypatch):
+    monkeypatch.setenv("PRESENTON_HOST_KEY", "a" * 64)
     async def runner():
         fake_result = MagicMock(path="/exports/deck.pdf")
         dummy = uuid.uuid4()
@@ -528,10 +529,8 @@ def test_export_includes_optional_fastapi_param():
 
         pdf_call = mock_pdf.await_args.kwargs
         assert "pdf-maker" in pdf_call["url"]
-        assert (
-            "#exportCookie=presenton_session%3Dabc%3B+theme%3Ddark"
-            in pdf_call["url"]
-        )
+        assert "exportCookie" not in pdf_call["url"]
+        assert "presenton_session" not in pdf_call["url"]
         assert pdf_call["fastapi_url"] == "https://fast.example"
         assert pdf_call["cookie_header"] == "presenton_session=abc; theme=dark"
 
@@ -543,6 +542,7 @@ def test_export_includes_optional_fastapi_param():
         pptx_call = mock_pptx.await_args.kwargs
         assert "#" not in pptx_call["url"]
         assert pptx_call["fastapi_url"] is None
+        assert pptx_call["cookie_header"] == "presenton_session=" + "a" * 64
 
     asyncio.run(runner())
 
@@ -628,7 +628,8 @@ def _make_aio_layout_session(resp: AsyncMock):
     return sess
 
 
-def test_get_layout_by_name_returns_model():
+def test_get_layout_by_name_returns_model(monkeypatch):
+    monkeypatch.setenv("PRESENTON_HOST_KEY", "a" * 64)
     resp = AsyncMock()
     resp.status = 200
     resp.json = AsyncMock(
@@ -650,7 +651,8 @@ def test_get_layout_by_name_returns_model():
     asyncio.run(runner())
 
 
-def test_get_layout_by_name_raises_on_http_failure():
+def test_get_layout_by_name_raises_on_http_failure(monkeypatch):
+    monkeypatch.setenv("PRESENTON_HOST_KEY", "a" * 64)
     resp = AsyncMock()
     resp.status = 500
     resp.text = AsyncMock(return_value="down")
@@ -666,7 +668,8 @@ def test_get_layout_by_name_raises_on_http_failure():
     asyncio.run(runner())
 
 
-def test_get_layout_by_name_does_not_attach_obsolete_auth_cookie():
+def test_get_layout_by_name_uses_host_header_without_obsolete_auth_cookie(monkeypatch):
+    monkeypatch.setenv("PRESENTON_HOST_KEY", "a" * 64)
     resp = AsyncMock()
     resp.status = 200
     resp.json = AsyncMock(
@@ -704,6 +707,7 @@ def test_get_layout_by_name_does_not_attach_obsolete_auth_cookie():
 
     asyncio.run(runner())
     assert "Cookie" not in captured
+    assert captured["X-Presenton-Host"] == "a" * 64
 
 
 @pytest.mark.parametrize(

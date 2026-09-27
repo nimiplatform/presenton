@@ -1,5 +1,5 @@
 {
-  "name": "presenton",
+  "name": "@presenton/renderer",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -60,9 +60,9 @@
     "next": "16.2.6",
     "next-themes": "^0.4.6",
     "prismjs": "^1.30.0",
-    "react": "19.2.6",
+    "react": "^19.2.8",
     "react-colorful": "^5.6.1",
-    "react-dom": "19.2.6",
+    "react-dom": "^19.2.8",
     "react-konva": "^19.2.4",
     "react-redux": "^9.1.2",
     "react-simple-code-editor": "^0.14.1",
@@ -73,7 +73,14 @@
     "tailwindcss-animate": "^1.0.7",
     "tiptap-markdown": "^0.8.10",
     "uuid": "^11.1.0",
-    "zod": "^4.0.5"
+    "zod": "^4.0.5",
+    "@nimiplatform/sdk": "^0.19.0",
+    "@nimiplatform/kit": "^0.16.0",
+    "@babel/generator": "^7.29.1",
+    "d3": "^7.9.0",
+    "@tiptap/core": "^2.26.1",
+    "@tiptap/pm": "^2.26.1",
+    "@radix-ui/react-collapsible": "^1.1.11"
   },
   "devDependencies": {
     "@types/babel__standalone": "^7.1.9",
@@ -88,8 +95,12 @@
     "esbuild": "0.25.8",
     "eslint": "^9",
     "eslint-config-next": "16.2.6",
-    "tailwindcss": "^3.4.1",
-    "typescript": "^5"
+    "tailwindcss": "^4.3.3",
+    "typescript": "^5",
+    "@tailwindcss/postcss": "^4.3.3",
+    "@types/babel__traverse": "^7.28.0",
+    "@types/babel__generator": "^7.27.0",
+    "@types/d3": "^7.4.3"
   },
   "overrides": {
     "brace-expansion": "2.0.2"
