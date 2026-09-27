@@ -6,11 +6,11 @@ from enums.web_search_provider import WebSearchProvider
 from utils import web_search
 
 
-def test_auto_uses_native_search_for_supported_llm(monkeypatch):
+def test_legacy_provider_env_does_not_enable_native_search(monkeypatch):
     monkeypatch.setenv("LLM", LLMProvider.OPENAI.value)
     monkeypatch.setenv("WEB_SEARCH_PROVIDER", WebSearchProvider.AUTO.value)
 
-    assert web_search.should_use_native_web_search() is True
+    assert web_search.should_use_native_web_search() is False
     assert web_search.should_expose_external_web_search_tool() is False
 
 
@@ -78,7 +78,7 @@ def test_auto_does_not_expose_external_search_when_native_tools_are_unavailable(
     monkeypatch.setenv("LLM", LLMProvider.GOOGLE.value)
     monkeypatch.setenv("WEB_SEARCH_PROVIDER", WebSearchProvider.AUTO.value)
 
-    assert web_search.should_use_native_web_search() is True
+    assert web_search.should_use_native_web_search() is False
     assert (
         web_search.should_expose_external_web_search_tool(
             native_search_available=False
@@ -139,11 +139,11 @@ def test_web_search_route_reports_actual_external_provider(monkeypatch):
     )
 
 
-def test_web_search_route_reports_model_native(monkeypatch):
+def test_nimi_requires_an_explicit_app_search_provider(monkeypatch):
     monkeypatch.setenv("LLM", LLMProvider.OPENAI.value)
     monkeypatch.setenv("WEB_SEARCH_PROVIDER", WebSearchProvider.AUTO.value)
 
-    assert web_search.get_web_search_route() == ("native", None)
+    assert web_search.get_web_search_route() == ("unavailable", None)
 
 
 def test_searxng_accepts_base_or_search_url(monkeypatch):

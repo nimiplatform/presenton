@@ -5,6 +5,7 @@ Runtime endpoints or a generic protected-method forwarding interface.
 """
 from __future__ import annotations
 
+import asyncio
 import json
 import queue
 import sys
@@ -75,6 +76,8 @@ def _read() -> None:
 def stream(operation: str, payload: dict, cancel: threading.Event | None = None) -> Iterator[dict]:
     if operation not in {"text", "image", "embed"}:
         raise ValueError("Unknown Presenton AI operation")
+    if cancel is not None and cancel.is_set():
+        raise RuntimeError("Presenton generation canceled")
     request_id = str(uuid.uuid4())
     target: queue.Queue = queue.Queue()
     with _lock:
@@ -92,9 +95,12 @@ def stream(operation: str, payload: dict, cancel: threading.Event | None = None)
             if message["type"] == "error":
                 terminal = True
                 raise NimiCallError(message)
-            yield message
+            # A request consumer may return immediately after this yield and
+            # close the iterator. A completed request must not send cancel.
             if message["type"] == "result":
                 terminal = True
+            yield message
+            if terminal:
                 return
     finally:
         with _lock:
@@ -103,11 +109,21 @@ def stream(operation: str, payload: dict, cancel: threading.Event | None = None)
             _send({"id": request_id, "operation": "cancel"})
 
 
-def request(operation: str, payload: dict) -> dict:
-    for event in stream(operation, payload):
+def request(operation: str, payload: dict, cancel: threading.Event | None = None) -> dict:
+    for event in stream(operation, payload, cancel):
         if event["type"] == "result":
             return event["value"]
     raise RuntimeError("Nimi returned no completed result")
+
+
+async def request_async(operation: str, payload: dict) -> dict:
+    # Cancelling asyncio.to_thread alone leaves its synchronous request running.
+    # Keep this event outside the worker so cancellation also covers queued work.
+    cancel = threading.Event()
+    try:
+        return await asyncio.to_thread(request, operation, payload, cancel)
+    finally:
+        cancel.set()
 
 
 def ready(port: int) -> None:

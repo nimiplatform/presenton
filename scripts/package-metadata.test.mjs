@@ -11,6 +11,7 @@ import {
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
+import { parse as parseYaml } from "yaml";
 import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
 
@@ -25,70 +26,39 @@ async function readJson(relativePath) {
   return JSON.parse(await readFile(path.join(repoRoot, relativePath), "utf8"));
 }
 
-test("application versions stay aligned", async () => {
-  const [
-    rootPackage,
-    rootLock,
-    electronPackage,
-    electronLock,
-    electronVersion,
-  ] =
-    await Promise.all([
-      readJson("package.json"),
-      readJson("package-lock.json"),
-      readJson("electron/package.json"),
-      readJson("electron/package-lock.json"),
-      readJson("electron/version.json"),
-    ]);
-
-  assert.equal(electronPackage.version, rootPackage.version);
-  assert.equal(rootLock.version, rootPackage.version);
-  assert.equal(rootLock.packages[""].version, rootPackage.version);
-  assert.equal(electronLock.version, electronPackage.version);
-  assert.equal(electronLock.packages[""].version, electronPackage.version);
-  assert.equal(electronVersion.version, electronPackage.version);
-  for (const downloadUrl of Object.values(electronVersion.downloads)) {
-    assert.match(downloadUrl, new RegExp(`electron-v${electronPackage.version}/`));
-    assert.match(downloadUrl, new RegExp(`Presenton-${electronPackage.version}\\.`));
+test("Nimi App identity and package version stay aligned", async () => {
+  const rootPackage = await readJson("package.json");
+  const documents = await Promise.all([
+    "nimi.app.yaml",
+    ".nimi/config/app-identity.yaml",
+    ".nimi/admission/submission.yaml",
+  ].map(async (file) => parseYaml(await readFile(path.join(repoRoot, file), "utf8"))));
+  for (const document of documents) {
+    assert.equal(document.version, rootPackage.version);
+    assert.equal(document.app_id, documents[0].app_id);
   }
+  assert.equal(rootPackage.main, "dist-electron/main.js");
+  assert.equal(rootPackage.private, true);
+  assert.match(rootPackage.presentationExportVersion, /^v\d+\.\d+\.\d+$/);
 });
 
-test("Docker and Electron use the same pinned presentation export", async () => {
-  const [rootPackage, electronPackage, dockerfile, dockerfileDev, dockerCompose] =
-    await Promise.all([
-      readJson("package.json"),
-      readJson("electron/package.json"),
-      readFile(path.join(repoRoot, "Dockerfile"), "utf8"),
-      readFile(path.join(repoRoot, "Dockerfile.dev"), "utf8"),
-      readFile(path.join(repoRoot, "docker-compose.yml"), "utf8"),
-    ]);
-
-  assert.equal(
-    electronPackage.exportVersion,
-    rootPackage.presentationExportVersion,
-  );
-  assert.match(dockerfile, /COPY package\.json \/app\//);
-  assert.match(
-    dockerfile,
-    /sync-presentation-export\.cjs --force/,
-  );
-  assert.match(dockerfileDev, /COPY package\.json package-lock\.json \/app\//);
-  assert.match(
-    dockerfileDev,
-    /sync-presentation-export\.cjs --force/,
-  );
-  assert.equal(
-    (
-      dockerCompose.match(
-        /presenton_presentation_export:\/app\/presentation-export/g,
-      ) || []
-    ).length,
-    2,
-  );
-  assert.match(
-    dockerCompose,
-    /\nvolumes:\n(?:  .+\n)*  presenton_presentation_export:\n/,
-  );
+test("workspace dependency declarations match the frozen pnpm lock", async () => {
+  const lock = parseYaml(await readFile(path.join(repoRoot, "pnpm-lock.yaml"), "utf8"));
+  const workspace = parseYaml(await readFile(path.join(repoRoot, "pnpm-workspace.yaml"), "utf8"));
+  for (const member of workspace.packages) {
+    const manifest = await readJson(path.join(member, "package.json"));
+    const importer = lock.importers[member];
+    assert.ok(importer, `Missing lock importer: ${member}`);
+    for (const section of ["dependencies", "devDependencies", "optionalDependencies"]) {
+      for (const [name, declared] of Object.entries(manifest[section] || {})) {
+        let expected = workspace.overrides?.[name] || declared;
+        if (expected.startsWith("file:")) {
+          expected = "file:" + path.relative(path.resolve(repoRoot, member), path.resolve(repoRoot, expected.slice(5))).split(path.sep).join("/");
+        }
+        assert.equal(importer[section]?.[name]?.specifier, expected, `${member}: ${name}`);
+      }
+    }
+  }
 });
 
 test("presentation export sync preserves a mounted runtime root", async (t) => {

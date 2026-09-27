@@ -1,63 +1,53 @@
 # GitHub Actions workflows
 
-## Test All Applications (`test-all.yml`)
+## Tests (`test-all.yml`)
 
-The test workflow runs on pushes and pull requests to `main`, and can also be
-started manually. It enforces the checks that exist in the current repository:
+Python runs the complete pytest suite on Python 3.11 with the locked uv dependencies.
+The App job uses Node 24 and the pnpm workspace lock to check the Nimi App, type-check
+the Host and renderer, and run the repository and renderer tests. Each job fails
+when a check fails. No provider-era tests are excluded at collection time.
+The App job also retains ESLint and the Cypress component checks. Cypress's
+browser is installed explicitly because pnpm only allows the selected dependency
+build scripts.
 
-- repository tooling: template-converter tests and bundled export verification;
-- FastAPI: every pytest test using the Python version and locked dependencies
-  declared in `servers/fastapi`;
-- Next.js: all Node.js unit tests, ESLint, a production build, and Cypress
-  component tests.
+The current workspace selects complete local Nimi development archives. Hosted
+App jobs require those selected archives to be available at the declared paths;
+they cannot install this cohort from a checkout alone. The independent Python
+job does not depend on those archives. Public release requires the matching
+published packages and registry resolutions as described in the root README.
+Do not silently replace the development cohort in CI.
 
-No test step is allowed to fail silently.
+## Build and release (`nimi-app-release.yml`)
 
-## Run the CI checks locally
+App Tools owns this workflow. It calls the same `test:app` entry point before the
+declared macOS arm64 build and packaging stages. Tag pushes additionally require
+production dependency and release preflight. The App-owned Python commands need
+uv and Python 3.11 on the build host; the test workflow installs them explicitly.
+Public build/release execution remains a separate acceptance stage.
 
-Install Node.js 20+, npm, Python 3.11, and `uv`, then run:
+## Run locally
 
-```bash
+With Node 24+, pnpm 10.34.5, Python 3.11 via uv, and the selected complete Nimi
+archives in place:
+
+```sh
 ./test-local.sh
 ```
 
-The script installs locked dependencies and runs the same commands as the
-GitHub Actions workflow.
+For an already prepared workspace, `pnpm test` runs the same Host/renderer type
+checks, repository tests, complete Python suite and renderer tests used by
+`pnpm exec nimi-app test`.
 
-## Run one test group
+Individual groups:
 
-### FastAPI
-
-```bash
-cd servers/fastapi
-uv sync --locked --dev
-mkdir -p /tmp/presenton-tests/app-data /tmp/presenton-tests/temp
-APP_DATA_DIRECTORY=/tmp/presenton-tests/app-data \
-TEMP_DIRECTORY=/tmp/presenton-tests/temp \
-DATABASE_URL=sqlite+aiosqlite:////tmp/presenton-tests/test.db \
-DISABLE_ANONYMOUS_TRACKING=true \
-DISABLE_IMAGE_GENERATION=true \
-uv run --locked python -m pytest --verbose --tb=short
+```sh
+pnpm run typecheck
+pnpm run test:repository
+pnpm run test:backend
+pnpm --dir servers/nextjs test
+pnpm --dir servers/nextjs run lint
+pnpm --dir servers/nextjs exec cypress run --component --browser electron
 ```
 
-### Next.js
-
-```bash
-cd servers/nextjs
-npm ci
-npm test
-npm run lint
-NEXT_PUBLIC_FAST_API=http://localhost:8000 \
-NEXT_PUBLIC_URL=http://localhost:3000 \
-npm run build
-npx cypress run --component --browser electron
-```
-
-### Repository tooling
-
-```bash
-npm ci
-npm test
-npm run sync:presentation-export
-npm run check:presentation-export
-```
+Actual App journeys use Desktop-supervised launch and the acceptance guide.
+Production builds and package installation are separate from these command checks.

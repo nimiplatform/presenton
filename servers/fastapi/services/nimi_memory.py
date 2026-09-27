@@ -7,7 +7,6 @@ new collection, populated lazily from the same source notes.
 from __future__ import annotations
 
 import hashlib
-import json
 import os
 import sqlite3
 import threading
@@ -38,12 +37,17 @@ class PresentationMemory:
         if infer:
             raise ValueError("Presentation notes are stored without inferred memories")
         content = "\n".join(message["content"] for message in messages)
-        item = {"id": str(uuid.uuid4()), "memory": content,
-                "created_at": datetime.now(timezone.utc).isoformat()}
-        with self.lock:
-            self.db.execute("INSERT INTO notes VALUES (?, ?, ?, ?)", (item["id"], user_id, content, item["created_at"]))
-            self.db.commit()
-        return {"results": [item]}
+        return self.add_notes([content], user_id=user_id)
+
+    def add_notes(self, texts, *, user_id):
+        items = [{"id": str(uuid.uuid4()), "memory": text,
+                  "created_at": datetime.now(timezone.utc).isoformat()} for text in texts]
+        # A bundled catalog is seeded atomically. Interrupted initialization
+        # must not leave a partial catalog that looks ready on the next launch.
+        with self.lock, self.db:
+            self.db.executemany("INSERT INTO notes VALUES (?, ?, ?, ?)",
+                [(item["id"], user_id, item["memory"], item["created_at"]) for item in items])
+        return {"results": items}
 
     def get_all(self, *, user_id=None, filters=None, limit=100, **kwargs):
         scope = user_id or (filters or {}).get("user_id")

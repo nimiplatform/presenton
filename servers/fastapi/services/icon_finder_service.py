@@ -2,7 +2,6 @@ import asyncio
 import json
 import os
 import threading
-from services.nimi_memory import PresentationMemory
 from utils.asset_directory_utils import absolute_fastapi_asset_url
 from utils.icon_weights import ALLOWED_ICON_WEIGHTS, DEFAULT_ICON_WEIGHT, normalize_icon_weight
 from utils.path_helpers import get_resource_path
@@ -16,12 +15,16 @@ class IconFinderService:
         with self._lock:
             if self._index is None:
                 from services.mem0_oss_memory import get_shared_mem0_client
-                self._index = get_shared_mem0_client()
-                if not self._index.get_all(user_id="icons", limit=1)["results"]:
+                index = get_shared_mem0_client()
+                if not index.get_all(user_id="icons", limit=1)["results"]:
                     with open(get_resource_path("assets/icons.json"), encoding="utf-8") as source:
                         icons = json.load(source)["icons"]
+                    notes = {}
                     for icon in icons:
-                        self._index.add([{"content": icon["name"] + "\n" + icon.get("tags", "")}], user_id="icons")
+                        name = self._base_icon_name(icon["name"])
+                        notes.setdefault(name, name + "\n" + icon.get("tags", ""))
+                    index.add_notes(notes.values(), user_id="icons")
+                self._index = index
             return self._index.search(query, user_id="icons", limit=k)["results"]
 
     async def search_icons(self, query: str, k: int = 1, weight: str | None = None):

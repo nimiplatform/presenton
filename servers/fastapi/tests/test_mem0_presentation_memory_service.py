@@ -12,16 +12,11 @@ from services.mem0_presentation_memory_service import Mem0PresentationMemoryServ
 class FakeMemoryClient:
     instances: list["FakeMemoryClient"] = []
 
-    def __init__(self, config=None):
-        self.config = config
+    def __init__(self):
         self.add_calls = []
         self.search_calls = []
         self.next_search_response = {"results": []}
         FakeMemoryClient.instances.append(self)
-
-    @classmethod
-    def from_config(cls, config):
-        return cls(config=config)
 
     def add(self, *args, **kwargs):
         messages = kwargs.get("messages") if "messages" in kwargs else None
@@ -51,7 +46,6 @@ class FakeMemoryClient:
 
 def _mem0_oss_fresh() -> None:
     mem0_oss._shared_client = None  # type: ignore[attr-defined]
-    mem0_oss._init_attempted = False  # type: ignore[attr-defined]
 
 
 class TestMem0PresentationMemoryService:
@@ -59,41 +53,21 @@ class TestMem0PresentationMemoryService:
         FakeMemoryClient.instances = []
         _mem0_oss_fresh()
 
-    def test_shared_client_defaults_to_local_llm_without_openai_key(self):
-        captured = {}
-
-        def _fake_memory_from_config(config, telemetry_base):
-            captured["config"] = config
-            captured["telemetry_base"] = telemetry_base
-            return FakeMemoryClient.from_config(config)
-
-        with patch.dict(
-            "os.environ",
-            {
-                "MEM0_ENABLED": "true",
-                "MEM0_REQUIRE_SPACY_MODEL": "false",
-                "APP_DATA_DIRECTORY": "/tmp/presenton-test",
-                "OLLAMA_URL": "http://ollama:11434",
-                "OLLAMA_MODEL": "llama3.1:8b",
-            },
-            clear=False,
-        ), patch(
-            "services.mem0_oss_memory.memory_from_config",
-            side_effect=_fake_memory_from_config,
-        ):
-            client = mem0_oss.get_shared_mem0_client()
-
-        assert client is not None
-        assert captured["telemetry_base"].endswith("/mem0/telemetry/oss")
-        assert captured["config"]["llm"]["provider"] == "openai"
-        assert captured["config"]["llm"]["config"]["model"] == "llama3.1:8b"
-        assert captured["config"]["llm"]["config"]["api_key"] == "ollama"
-        assert (
-            captured["config"]["llm"]["config"]["openai_base_url"]
-            == "http://ollama:11434/v1"
-        )
-        assert captured["config"]["vector_store"]["provider"] == "qdrant"
-        assert captured["config"]["embedder"]["provider"] == "fastembed"
+    def test_shared_client_keeps_notes_in_workspace_without_provider_inference(self, monkeypatch, tmp_path):
+        from services.nimi_memory import PresentationMemory
+        monkeypatch.setenv("APP_DATA_DIRECTORY", str(tmp_path))
+        monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+        client = mem0_oss.get_shared_mem0_client()
+        try:
+            assert isinstance(client, PresentationMemory)
+            assert mem0_oss.get_shared_mem0_client() is client
+            client.add([{"content": "source document"}], user_id="deck", infer=False)
+            assert client.get_all(user_id="deck")["results"][0]["memory"] == "source document"
+            assert (tmp_path / "retrieval" / "notes.sqlite").is_file()
+        finally:
+            client.vectors.close()
+            client.db.close()
+            mem0_oss._shared_client = None
 
     def test_store_generation_context_uses_presentation_scope(self):
         with patch.dict(
@@ -105,24 +79,7 @@ class TestMem0PresentationMemoryService:
             clear=False,
         ), patch(
             "services.mem0_presentation_memory_service.get_shared_mem0_client",
-            return_value=FakeMemoryClient.from_config(
-                {
-                    "vector_store": {
-                        "provider": "qdrant",
-                        "config": {
-                            "on_disk": True,
-                            "embedding_model_dims": 384,
-                        },
-                    },
-                    "embedder": {
-                        "provider": "fastembed",
-                        "config": {
-                            "model": "BAAI/bge-small-en-v1.5",
-                            "embedding_dims": 384,
-                        },
-                    },
-                }
-            ),
+            return_value=FakeMemoryClient(),
         ):
             service = Mem0PresentationMemoryService()
             presentation_id = uuid.uuid4()
@@ -139,16 +96,6 @@ class TestMem0PresentationMemoryService:
 
         assert len(FakeMemoryClient.instances) == 1
         client = FakeMemoryClient.instances[0]
-        assert client.config is not None
-        assert client.config["vector_store"]["provider"] == "qdrant"
-        assert client.config["embedder"]["provider"] == "fastembed"
-        assert (
-            client.config["embedder"]["config"]["model"]
-            == "BAAI/bge-small-en-v1.5"
-        )
-        assert client.config["embedder"]["config"]["embedding_dims"] == 384
-        assert client.config["vector_store"]["config"]["on_disk"] is True
-        assert client.config["vector_store"]["config"]["embedding_model_dims"] == 384
         assert len(client.add_calls) == 5
 
         scoped_user_id = f"presentation:{presentation_id}"
@@ -175,18 +122,7 @@ class TestMem0PresentationMemoryService:
             clear=False,
         ), patch(
             "services.mem0_presentation_memory_service.get_shared_mem0_client",
-            return_value=FakeMemoryClient.from_config(
-                {
-                    "vector_store": {"provider": "qdrant", "config": {}},
-                    "embedder": {
-                        "provider": "fastembed",
-                        "config": {
-                            "model": "BAAI/bge-small-en-v1.5",
-                            "embedding_dims": 384,
-                        },
-                    },
-                }
-            ),
+            return_value=FakeMemoryClient(),
         ):
             service = Mem0PresentationMemoryService()
             presentation_id = uuid.uuid4()

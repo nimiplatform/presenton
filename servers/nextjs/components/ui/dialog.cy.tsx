@@ -33,8 +33,9 @@ describe("DialogContent", () => {
 
     cy.get('[data-cy="dialog-content"]')
       .should("be.visible")
-      .and("have.css", "translate", "none")
-      .then(($dialog) => {
+      // Retry the geometry assertion through the entrance animation. Tailwind
+      // 4 uses the translate property for centering rather than translate:none.
+      .should(($dialog) => {
         const bounds = $dialog[0].getBoundingClientRect();
 
         expect(bounds.left).to.be.greaterThan(-1);

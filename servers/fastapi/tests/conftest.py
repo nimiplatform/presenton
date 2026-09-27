@@ -52,6 +52,14 @@ class FakeAsyncSession:
 
 
 @pytest.fixture
+def host_key(monkeypatch) -> str:
+    """The business-worker environment supplied by the Host, without HTTP bypasses."""
+    key = "a" * 64
+    monkeypatch.setenv("PRESENTON_HOST_KEY", key)
+    return key
+
+
+@pytest.fixture
 def fake_async_session() -> FakeAsyncSession:
     return FakeAsyncSession()
 

@@ -29,6 +29,7 @@ const eslintConfig = defineConfig([
   globalIgnores([
     ".next/**",
     ".next-build/**",
+    ".next-production/**",
     "out/**",
     "build/**",
     "cypress/**",

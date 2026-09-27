@@ -1,4 +1,3 @@
-import asyncio
 import base64
 import os
 import uuid
@@ -9,7 +8,7 @@ from models.sql.image_asset import ImageAsset
 from utils.get_env import get_pexels_api_key_env, get_pixabay_api_key_env
 from utils.asset_directory_utils import absolute_fastapi_asset_url
 from utils.image_provider import is_image_generation_disabled, is_pixels_selected, is_pixabay_selected
-from services.nimi_channel import request
+from services.nimi_channel import request_async
 
 class ImageGenerationService:
     def __init__(self, output_directory: str):
@@ -28,7 +27,7 @@ class ImageGenerationService:
         if is_pixabay_selected():
             return await self.get_image_from_pixabay(text)
         try:
-            result = await asyncio.to_thread(request, "image", {"prompt": text})
+            result = await request_async("image", {"prompt": text})
         except RuntimeError as error:
             raise HTTPException(503, str(error)) from error
         suffix = {"image/png": ".png", "image/jpeg": ".jpg", "image/webp": ".webp", "image/gif": ".gif"}[result["mimeType"]]

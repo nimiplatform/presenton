@@ -29,6 +29,8 @@ from models.sql.async_task import AsyncTaskModel
 from models.sql.presentation import PresentationModel, PresentationVersion
 from utils.datetime_utils import get_current_utc_datetime
 
+pytestmark = pytest.mark.usefixtures("host_key")
+
 
 class FakeRequest:
     def __init__(self):

@@ -22,6 +22,8 @@ from models.sql.template_v2 import TemplateV2
 from templates.presentation_layout import PresentationLayoutModel, SlideLayoutModel
 from tests.conftest import FakeAsyncSession
 
+pytestmark = pytest.mark.usefixtures("host_key")
+
 
 class FakeRequest:
     def __init__(self):

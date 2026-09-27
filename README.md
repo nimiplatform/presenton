@@ -49,9 +49,7 @@ uses `pnpm dev` and its CDP target. Full build/pack is a separate final workflow
 check, not a prerequisite for every iteration.
 
 ```sh
-pnpm exec tsc -p tsconfig.nimi-host.json
-pnpm --dir servers/nextjs exec tsc --noEmit
-pnpm run test:app
+pnpm test
 # Final artifact workflow on its matching macOS arm64 host:
 pnpm exec nimi-app build --target macos-aarch64
 pnpm exec nimi-app pack --target macos-aarch64 --production
@@ -60,6 +58,14 @@ pnpm exec nimi-app pack --target macos-aarch64 --production
 The current declared build target is macOS arm64. Normal system-Runtime
 installation, public release/Registry admission and Windows execution remain
 separate acceptance stages.
+
+`pnpm test` and `nimi-app test` share the same checks: Host and renderer types,
+repository tools, the full Python suite, and renderer unit tests. Python tests
+use the Nimi worker's business contract; retired direct-provider image/config
+tests are replaced by Nimi request, cancellation and configuration coverage.
+The workspace uses `pnpm-lock.yaml`; the old root and renderer npm lockfiles are
+removed. See [.github/workflows/README.md](.github/workflows/README.md) for CI
+commands and the current local-package prerequisites.
 
 ## Using AI
 
@@ -230,6 +236,30 @@ The native package includes the source-development support needed for this local
 cohort. These results and archives do not imply public npm availability or
 Registry admission. The omitted safety declaration remains explicitly undeclared
 for local development and import; public admission is a separate publisher step.
+
+## Source fixes after installed acceptance
+
+The source now forwards cancellation of an image request to the Host and releases
+its worker request without interrupting other images. Icon search indexes one
+record per base icon, then applies the selected weight when building the URL.
+The bundled 1,512 icons need 95 embedding batches plus one query on a cold index,
+down from 567 batches plus one query. Catalog insertion is atomic, so a failed
+initialization can retry without keeping a partial catalog.
+
+The shared `pnpm test` / App Tools test entry passes Host/renderer type checks,
+12 repository tests, all 892 Python tests and 61 renderer tests. The Python suite
+has no collection exclusions for retired providers: their obsolete adapter tests
+have been replaced by tests of the Nimi request and configuration boundaries.
+CI and `test-local.sh` also retain ESLint and Cypress component checks: lint
+reports zero errors (79 existing warnings), and all three component cases pass.
+The dialog case checks its final position after the entrance animation, using
+Tailwind 4's current positioning behavior.
+
+These are source and regression results. The installed `0.9.11-beta.2` artifact
+described above predates these fixes. Real model cancellation and cold icon
+indexing for the fixed source remain **NOT-VERIFIED** because the official
+launcher reported that Nimi was not running. Hosted App CI also remains
+**NOT-VERIFIED** with the current local development package inputs.
 
 ## Support
 

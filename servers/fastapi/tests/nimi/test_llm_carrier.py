@@ -48,12 +48,39 @@ def test_provider_options_and_orphan_tool_results_fail_closed():
 
 def test_channel_cancel_releases_request_without_waiting_for_a_delta(monkeypatch):
     frames = []
-    monkeypatch.setattr(nimi_channel, '_send', frames.append)
-    stop = threading.Event(); stop.set()
+    stop = threading.Event()
+    def send(frame):
+        frames.append(frame)
+        stop.set()
+    monkeypatch.setattr(nimi_channel, '_send', send)
     import pytest
     with pytest.raises(RuntimeError, match='canceled'):
         list(nimi_channel.stream('text', {'messages': []}, stop))
     assert [frame['operation'] for frame in frames] == ['text', 'cancel']
+    assert not nimi_channel._pending
+
+
+def test_canceled_queued_request_never_dispatches(monkeypatch):
+    import pytest
+    frames = []
+    monkeypatch.setattr(nimi_channel, '_send', frames.append)
+    stop = threading.Event()
+    stop.set()
+    with pytest.raises(RuntimeError, match='canceled'):
+        nimi_channel.request('image', {'prompt': 'unused'}, stop)
+    assert frames == []
+    assert not nimi_channel._pending
+
+
+def test_completed_request_does_not_send_cancel(monkeypatch):
+    frames = []
+    def send(frame):
+        frames.append(frame)
+        if frame['operation'] == 'embed':
+            nimi_channel._pending[frame['id']].put({'type': 'result', 'value': {'spaceId': 'test', 'vectors': [[1.0]]}})
+    monkeypatch.setattr(nimi_channel, '_send', send)
+    assert nimi_channel.request('embed', {'inputs': ['note']})['spaceId'] == 'test'
+    assert [frame['operation'] for frame in frames] == ['embed']
     assert not nimi_channel._pending
 
 
