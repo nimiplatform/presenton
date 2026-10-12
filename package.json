@@ -1,6 +1,6 @@
 {
   "name": "presenton",
-  "version": "0.9.11-beta.3",
+  "version": "0.9.11-beta.4",
   "license": "Apache-2.0",
   "presentationExportVersion": "v1.0.34",
   "type": "module",
@@ -14,7 +14,7 @@
     "sync:presentation-export:force": "node scripts/sync-presentation-export.cjs --force",
     "check:presentation-export": "node scripts/sync-presentation-export.cjs --check-only",
     "test:repository": "node --import tsx --test scripts/*.test.mjs",
-    "test:backend": "cd servers/fastapi && uv run --locked --python 3.11 pytest -q",
+    "test:backend": "cd servers/fastapi && node ../../scripts/nimi-uv.mjs run --locked --python 3.11 pytest -q",
     "typecheck": "pnpm exec tsc -p tsconfig.nimi-host.json && pnpm --dir servers/nextjs exec tsc --noEmit --incremental false",
     "postinstall": "install-electron --no",
     "dev:renderer": "pnpm --dir servers/nextjs exec next dev --hostname 127.0.0.1 --port 6016",
@@ -27,7 +27,7 @@
     "dev:electron": "nimi-app dev --shell electron",
     "sync": "nimi-app sync",
     "pack": "nimi-app pack",
-    "setup:backend": "uv sync --project servers/fastapi --python 3.11 --group dev",
+    "setup:backend": "node scripts/nimi-uv.mjs sync --project servers/fastapi --python 3.11 --group dev",
     "setup:export": "pnpm sync:presentation-export && node electron/scripts/prepare-export-chromium.cjs"
   },
   "dependencies": {

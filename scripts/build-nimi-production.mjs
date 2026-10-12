@@ -3,7 +3,7 @@ if (process.platform !== 'darwin' || process.arch !== 'arm64') throw new Error('
 for (const [command, args, cwd] of [
   ['pnpm', ['setup:export'], '.'],
   ['pnpm', ['--dir', 'servers/nextjs', 'build'], '.'],
-  ['uv', ['run', 'pyinstaller', '--noconfirm', '--distpath', '../../resources', 'nimi-worker.spec'], 'servers/fastapi'],
+  ['node', ['../../scripts/nimi-uv.mjs', 'run', '--locked', 'pyinstaller', '--noconfirm', '--distpath', '../../resources', 'nimi-worker.spec'], 'servers/fastapi'],
   ['pnpm', ['sync:presentation-export'], '.'],
   ['node', ['scripts/build-nimi-electron.mjs', '--production'], '.'],
   ['node', ['scripts/package-nimi-electron.mjs'], '.'],
