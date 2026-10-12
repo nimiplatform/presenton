@@ -1,3 +1,5 @@
+from copy import deepcopy
+
 from utils.llm_utils import extract_structured_content, serialize_structured_content
 from utils.schema_utils import (
     ensure_array_schemas_have_items,
@@ -7,6 +9,7 @@ from utils.schema_utils import (
 
 def test_extract_structured_content_from_json_text():
     payload = extract_structured_content('{"slides": [{"content": "A"}]}')
+    assert deepcopy(payload) == {"slides": [{"content": "A"}]}
     assert payload == {"slides": [{"content": "A"}]}
 
 

@@ -15,6 +15,7 @@ from utils.schema_utils import (
     add_field_in_schema,
     ensure_array_schemas_have_items,
     remove_fields_from_schema,
+    slide_response_shape,
 )
 
 SLIDE_CONTENT_SYSTEM_PROMPT = r"""
@@ -247,9 +248,10 @@ async def get_slide_content_from_type_and_outline(
     try:
         response_format = JSONSchemaResponse(
             name="response",
-            json_schema=response_schema,
-            # Template schemas keep optional fields and content length limits.
-            strict=False,
+            json_schema=slide_response_shape(response_schema),
+            # Runtime validates JSON shape; the workflow validates the original
+            # template's length budgets and requests a corrected draft if needed.
+            strict=True,
         )
         messages = get_messages(
             outline.content,

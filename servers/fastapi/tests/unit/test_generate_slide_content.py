@@ -96,6 +96,7 @@ def test_slide_content_generation_normalizes_object_schema_and_calls_llm(
         captured["response_format"] = response_format
         captured["json_schema"] = json_schema
         captured["messages"] = _kwargs["messages"]
+        captured["validate_schema"] = _kwargs["validate_schema"]
         return {
             "title": "Generated title",
             "__speaker_note__": "Speaker note",
@@ -131,6 +132,9 @@ def test_slide_content_generation_normalizes_object_schema_and_calls_llm(
     assert result["title"] == "Generated title"
     assert captured["json_schema"]["type"] == "object"
     assert "__speaker_note__" in captured["json_schema"]["properties"]
-    assert captured["response_format"].json_schema == captured["json_schema"]
-    assert captured["response_format"].strict is False
+    assert captured["response_format"].json_schema["required"] == captured["json_schema"]["required"]
+    assert captured["json_schema"]["properties"]["__speaker_note__"]["maxLength"] == 500
+    assert "maxLength" not in captured["response_format"].json_schema["properties"]["__speaker_note__"]
+    assert captured["validate_schema"] is True
+    assert captured["response_format"].strict is True
     assert "# Slide Number:\n2" in captured["messages"][1].content

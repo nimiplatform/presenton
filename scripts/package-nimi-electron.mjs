@@ -107,6 +107,7 @@ try {
   }
 
   await cp(path.join(appRoot, 'dist-electron'), path.join(productionSourceRoot, 'dist-electron'), { recursive: true });
+  await cp(path.join(appRoot, 'patches'), path.join(productionSourceRoot, 'patches'), { recursive: true });
   await installProductionDependencies(productionSourceRoot);
   const businessRoot = path.join(stagingRoot, 'presenton');
   await mkdir(path.join(businessRoot, 'servers/nextjs/.next-production'), { recursive: true });
@@ -123,6 +124,7 @@ try {
   delete productionManifest.devDependencies;
   await writeFile(productionManifestPath, `${JSON.stringify(productionManifest, null, 2)}\n`);
   await rm(path.join(productionSourceRoot, 'pnpm-lock.yaml'));
+  await rm(path.join(productionSourceRoot, 'patches'), { recursive: true });
   await rm(path.join(productionSourceRoot, 'pnpm-workspace.yaml'), { force: true });
 
   const installedNativePackage = path.join(productionSourceRoot, 'node_modules', ...NATIVE_BINDING_PACKAGE.split('/'));

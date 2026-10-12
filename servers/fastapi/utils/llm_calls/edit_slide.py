@@ -13,6 +13,7 @@ from utils.schema_utils import (
     add_field_in_schema,
     ensure_array_schemas_have_items,
     remove_fields_from_schema,
+    slide_response_shape,
 )
 
 
@@ -140,9 +141,9 @@ async def get_edited_slide_content(
     try:
         response_format = JSONSchemaResponse(
             name="response",
-            json_schema=response_schema,
-            # Preserve the same template constraints used for generation.
-            strict=False,
+            json_schema=slide_response_shape(response_schema),
+            # Validate shape in Runtime and all template limits in the workflow.
+            strict=True,
         )
         messages = get_messages(
             prompt,

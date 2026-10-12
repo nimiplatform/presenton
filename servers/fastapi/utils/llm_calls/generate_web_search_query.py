@@ -46,7 +46,7 @@ async def generate_web_search_query(
     response_format = JSONSchemaResponse(
         name="web_search_query",
         json_schema=SEARCH_QUERY_RESPONSE_SCHEMA,
-        strict=False,
+        strict=True,
     )
     response = await generate_structured_with_schema_retries(
         client,

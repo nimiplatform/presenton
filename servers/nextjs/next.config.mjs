@@ -8,6 +8,9 @@ const nextConfig = {
   reactStrictMode: false,
   distDir: process.env.NODE_ENV === "production" ? ".next-production" : ".next-build",
   output: "standalone",
+  // Text repair, icon indexing and media Jobs outlive Next's 30-second proxy
+  // default. Keep the supervised business stream connected with a finite budget.
+  experimental: { proxyTimeout: 600_000 },
   outputFileTracingRoot: path.resolve(nextjsRoot, "../.."),
   // Next traces pnpm's hoisted semver alias without its target package. Include
   // the installed target so the standalone server has no dangling dependency.

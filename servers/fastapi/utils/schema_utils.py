@@ -23,6 +23,34 @@ supported_string_formats = [
 ]
 
 
+def slide_response_shape(schema: dict) -> dict:
+    """Keep JSON shape strict; the slide workflow validates length budgets.
+
+    Returning a structurally valid draft lets the existing validation loop give
+    precise feedback for text and list lengths. The original schema remains the
+    acceptance contract before composition or persistence.
+    """
+    field_maps = {"properties", "patternProperties", "$defs", "definitions"}
+    literal_values = {"enum", "const", "default", "examples"}
+
+    def project(value, field_map=False):
+        if isinstance(value, dict):
+            return {
+                key: (
+                    deepcopy(child)
+                    if not field_map and key in literal_values
+                    else project(child, not field_map and key in field_maps)
+                )
+                for key, child in value.items()
+                if field_map or key not in {"minLength", "maxLength", "minItems", "maxItems"}
+            }
+        if isinstance(value, list):
+            return [project(child) for child in value]
+        return value
+
+    return project(schema)
+
+
 def remove_fields_from_schema(schema: dict, fields_to_remove: List[str]):
     schema = deepcopy(schema)
     properties_paths = get_dict_paths_with_key(schema, "properties")

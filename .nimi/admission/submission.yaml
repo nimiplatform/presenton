@@ -1,6 +1,6 @@
 app_id: io.github.nimiplatform.presenton
 display_name: Presenton
-version: 0.9.11-beta.4
+version: 0.9.11-beta.5
 profile: standalone
 npm_package_name: presenton
 cargo_package_name: presenton-shell

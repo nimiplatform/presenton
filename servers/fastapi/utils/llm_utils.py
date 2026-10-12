@@ -450,7 +450,9 @@ def extract_structured_content(content: Any) -> Optional[dict]:
         return None
 
     if isinstance(parsed, dict):
-        return dict(parsed)
+        # dirtyjson attaches source-position metadata to nested containers.
+        # Slide composition and persistence need ordinary JSON data throughout.
+        return json.loads(json.dumps(parsed, ensure_ascii=False))
     return None
 
 

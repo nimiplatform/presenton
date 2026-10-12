@@ -14,7 +14,7 @@ repository is [nimiplatform/presenton](https://github.com/nimiplatform/presenton
 ## Development
 
 Use Node 24+, pnpm 10.34.5, Python 3.11 via uv and a matching running Nimi.
-Version 0.9.11-beta.4 selects the published npm SDK **0.21.0**, Kit/native
+Version 0.9.11-beta.5 selects the published npm SDK **0.21.0**, Kit/native
 **0.19.0**, App Tools **0.12.0** and Nimi Coding **0.6.5**. The frozen root
 workspace lock records registry integrity, with no Nimi local package override.
 The App retains its Beta version stage.
