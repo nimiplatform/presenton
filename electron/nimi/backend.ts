@@ -81,7 +81,9 @@ export class PresentonBackend {
           TEMP_DIRECTORY: path.join(dataDirectory, 'tmp'), USER_CONFIG_PATH: path.join(dataDirectory, 'business-settings.json'),
           CAN_CHANGE_KEYS: 'false', DISABLE_AUTH: 'true', LITEPARSE_NODE_BINARY: process.execPath, ELECTRON_RUN_AS_NODE: '1',
           PRESENTON_ELECTRON: 'true', PUPPETEER_EXECUTABLE_PATH: exportExecutable,
-          NEXT_PUBLIC_URL: this.options.rendererOrigin, NEXT_PUBLIC_FAST_API: this.options.rendererOrigin,
+          // The renderer proxies /app_data and /static on its own origin.
+          // Keep stored asset references relative: its port changes on restart.
+          NEXT_PUBLIC_URL: this.options.rendererOrigin,
           PRESENTON_APP_ROOT: this.options.appRoot, EXPORT_PACKAGE_ROOT: path.join(this.options.appRoot, 'presentation-export'),
         },
       });

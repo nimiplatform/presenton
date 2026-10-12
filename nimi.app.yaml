@@ -1,6 +1,6 @@
 app_id: io.github.nimiplatform.presenton
 display_name: Presenton
-version: 0.9.11-beta.6
+version: 0.9.11-beta.7
 profile: standalone
 manifest_role: submitted-input
 app_access:

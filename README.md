@@ -1,4 +1,4 @@
-## Catalog App support for source Runtime — 0.9.11-beta.6
+## Catalog App support for source Runtime — 0.9.11-beta.7
 
 This release resolves public npm Kit/native **0.19.2** in the frozen lockfile,
 with SDK **0.21.0** and App Tools **0.12.0**. Launch the installed Catalog App

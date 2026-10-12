@@ -128,6 +128,29 @@ def test_generate_image_returns_placeholder_without_db_write(fake_async_session)
     assert fake_async_session.added == []
 
 
+def test_generated_app_data_asset_survives_renderer_origin_change(
+    tmp_path, fake_async_session, monkeypatch
+):
+    from urllib.parse import urljoin
+
+    monkeypatch.setenv("APP_DATA_DIRECTORY", str(tmp_path))
+    monkeypatch.delenv("NEXT_PUBLIC_FAST_API", raising=False)
+    monkeypatch.setenv("NEXT_PUBLIC_URL", "http://127.0.0.1:51001")
+    client = _build_client(fake_async_session)
+    asset = ImageAsset(path=str(tmp_path / "images" / "generated.png"), is_uploaded=False)
+    with patch("api.v1.ppt.endpoints.images.ImageGenerationService") as service_cls:
+        service_cls.return_value.generate_image = AsyncMock(return_value=asset)
+        response = client.get("/images/generate?prompt=blue-bird")
+
+    assert response.status_code == 200
+    saved_reference = response.json()
+    assert saved_reference == "/app_data/images/generated.png"
+    assert urljoin("http://127.0.0.1:52002", saved_reference) == (
+        "http://127.0.0.1:52002/app_data/images/generated.png"
+    )
+    assert fake_async_session.added[-1] == asset
+
+
 def test_generate_image_returns_provider_error_status(fake_async_session):
     client = _build_client(fake_async_session)
 
