@@ -1,3 +1,9 @@
+## Windows candidate 0.9.11-beta.8 — 2026-10-13
+
+Unreleased candidate with SDK 0.21.0, Kit/native 0.19.3, App Tools 0.12.2 and Nimi Coding 0.6.5. Type checks, 12 repository tests, 895 Python tests and 63 renderer tests pass. The frozen Windows API initialized a Unicode workspace. Portable resource/executable paths, UTF-8 worker startup, Windows export-path parsing and production tracing are repaired. Download URLs normalize Windows separators while retaining the file-download ownership guard. Development backend state is excluded from the package and rejected if present. Optional debugging source maps are omitted to keep the Windows archive below GitHub's 2 GiB limit. The icon-index test now accepts only the existing bold fallback for the bundled book-open-user icon, whose thin variant has a different filename; equal test vectors previously made that assertion intermittent.
+
+Supervised AI acceptance is partial: MiMo rejected strict JSON behavior; qwen3.8-flash produced five Chinese outlines, but full Standard-template generation and subsequent General-template outline attempts failed output validation. The real failures are retained; full AI creation is NOT-VERIFIED. Separately, a manually edited Chinese single-slide presentation survived reload and exported through the real UI to PDF and PPTX. PDF rendering and PPTX slide/text inspection confirmed the Chinese title with no overlapping placeholder blocks. These outputs are `.nimi/local/windows-manual.pdf` and `.nimi/local/windows-manual.pptx`; they do not establish AI generation success. Candidate installation is NOT-VERIFIED, and new public admission needs the publisher's safety declaration. Earlier macOS evidence remains scoped to beta.7.
+
 ## Catalog App support for source Runtime — 0.9.11-beta.7
 
 This release resolves public npm Kit/native **0.19.2** in the frozen lockfile,

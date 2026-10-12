@@ -1,5 +1,5 @@
 import { spawn } from 'node:child_process';
-import { copyFile, cp, mkdir, mkdtemp, readFile, realpath, rm, writeFile } from 'node:fs/promises';
+import { copyFile, cp, mkdir, mkdtemp, readFile, realpath, rm, writeFile, access } from 'node:fs/promises';
 import { createRequire } from 'node:module';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -9,6 +9,9 @@ import { parse as parseYaml, stringify as stringifyYaml } from 'yaml';
 
 const APP_EXECUTABLE_NAME = "presenton-shell";
 const APP_PRODUCT_NAME = "Presenton";
+// Source maps are optional debugging material, not executable dependencies.
+// Keep the Windows distribution below the release host's per-asset limit.
+const productionResource = source => !/\.(?:[cm]?js|css|ts)\.map$/u.test(source);
 function resolveWindowsResourceVersion(appVersion) {
   const semverPattern = /^(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)(?:-[0-9A-Za-z]+(?:[.-][0-9A-Za-z]+)*)?(?:\+[0-9A-Za-z]+(?:[.-][0-9A-Za-z]+)*)?$/u;
   if (typeof appVersion !== 'string' || !semverPattern.test(appVersion)) {
@@ -87,6 +90,11 @@ const packagerTempRoot = path.join(stagingRoot, 'packager');
 let packageCompleted = false;
 
 try {
+  const developmentTrace = path.join(appRoot, 'servers/nextjs/.next-production/standalone/.nimi');
+  if (await access(developmentTrace).then(() => true, error => {
+    if (error.code !== 'ENOENT') throw error;
+    return false;
+  })) throw new Error('The standalone renderer contains private development state. Repair Next output file tracing before packaging.');
 
 
   await realpath(path.join(appRoot, 'servers/nextjs/.next-production/standalone/servers/nextjs/server.js'));
@@ -112,8 +120,8 @@ try {
   const businessRoot = path.join(stagingRoot, 'presenton');
   await mkdir(path.join(businessRoot, 'servers/nextjs/.next-production'), { recursive: true });
   for (const directory of ['assets', 'static', 'alembic']) await cp(path.join(appRoot, 'servers/fastapi', directory), path.join(businessRoot, 'servers/fastapi', directory), { recursive: true, dereference: true });
-  for (const directory of ['templates', 'presentation-export']) await cp(path.join(appRoot, directory), path.join(businessRoot, directory), { recursive: true, dereference: true });
-  await cp(path.join(productionSourceRoot, 'node_modules'), path.join(businessRoot, 'node_modules'), { recursive: true, dereference: true });
+  for (const directory of ['templates', 'presentation-export']) await cp(path.join(appRoot, directory), path.join(businessRoot, directory), { recursive: true, dereference: true, filter: productionResource });
+  await cp(path.join(productionSourceRoot, 'node_modules'), path.join(businessRoot, 'node_modules'), { recursive: true, dereference: true, filter: productionResource });
   await cp(path.join(appRoot, 'servers/fastapi/scripts'), path.join(businessRoot, 'servers/fastapi/scripts'), { recursive: true, dereference: true });
   await copyFile(path.join(appRoot, 'LICENSE'), path.join(productionSourceRoot, 'LICENSE'));
   await copyFile(path.join(appRoot, 'NOTICE'), path.join(productionSourceRoot, 'NOTICE'));
@@ -156,14 +164,18 @@ try {
     asar: { unpack: '*.{node,dylib,dll}' },
     extraResource: [path.join(stagingRoot, 'presenton'), ...(MACOS_BUILD ? [path.join(stagingRoot, 'nimi-native')] : [])],
     afterCopyExtraResources: [async ({ buildPath }) => {
-      const destinationRoot = path.join(buildPath, `${APP_EXECUTABLE_NAME}.app`, 'Contents/Resources/presenton');
+      const resourcesRoot = MACOS_BUILD
+        ? path.join(buildPath, `${APP_EXECUTABLE_NAME}.app`, 'Contents', 'Resources')
+        : path.join(buildPath, 'resources');
+      const destinationRoot = path.join(resourcesRoot, 'presenton');
       // Native frameworks and pnpm's standalone module graph need their aliases.
       // Copy directly into the final staging bundle: packager's extra-resource
       // copy otherwise resolves aliases back to its temporary source directory.
       for (const directory of ['resources/presenton-worker', 'electron/resources/chromium', 'servers/nextjs/.next-production/standalone']) {
         const destination = path.join(destinationRoot, directory);
         await mkdir(path.dirname(destination), { recursive: true });
-        await cp(path.join(appRoot, directory), destination, { recursive: true, dereference: false, verbatimSymlinks: true });
+        await rm(destination, { recursive: true, force: true });
+        await cp(path.join(appRoot, directory), destination, { recursive: true, dereference: !MACOS_BUILD, verbatimSymlinks: MACOS_BUILD, filter: productionResource });
       }
       const rendererRoot = path.join(destinationRoot, 'servers/nextjs/.next-production/standalone/servers/nextjs');
       await cp(path.join(appRoot, 'servers/nextjs/public'), path.join(rendererRoot, 'public'), { recursive: true, dereference: true });

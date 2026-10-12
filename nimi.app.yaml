@@ -1,6 +1,6 @@
 app_id: io.github.nimiplatform.presenton
 display_name: Presenton
-version: 0.9.11-beta.7
+version: 0.9.11-beta.8
 profile: standalone
 manifest_role: submitted-input
 app_access:
@@ -15,6 +15,9 @@ storage_policy:
   os_storage_disclosure:
     - path_pattern: ~/Library/Application Support/Presenton Nimi/workspaces/
       purpose: Presentation databases, templates, uploaded documents, generated images and document retrieval caches, partitioned by the Nimi-managed App workspace identifier
+      expected_size_band: 10 MB–10 GB depending on imported media
+    - path_pattern: '%APPDATA%/Presenton Nimi/workspaces/'
+      purpose: Windows presentation databases, templates, uploaded documents, generated images and document retrieval caches, partitioned by the Nimi-managed App workspace identifier
       expected_size_band: 10 MB–10 GB depending on imported media
     - path_pattern: User-selected download destinations
       purpose: Exported PDF and PPTX presentations

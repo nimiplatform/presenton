@@ -269,10 +269,14 @@ function installRuntime(version, archivePath) {
       2,
     )}\n`,
   );
-  const npm = process.platform === "win32" ? "npm.cmd" : "npm";
+  // Invoke npm's JavaScript entry with Node: .cmd is not executable by execFile
+  // on Windows, and a shell would reinterpret cache paths containing spaces.
+  const { createRequire } = require("module");
+  const npmCli = process.platform === "win32" ? path.join(path.dirname(createRequire(process.execPath).resolve("npm/package.json")), "bin", "npm-cli.js") : null;
   execFileSync(
-    npm,
+    npmCli ? process.execPath : "npm",
     [
+      ...(npmCli ? [npmCli] : []),
       "install",
       "--omit=dev",
       "--ignore-scripts",

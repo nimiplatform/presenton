@@ -13,7 +13,8 @@ if __name__ == '__main__':
                 os.killpg(os.getpid(), signal.SIGTERM)
         finally:
             os._exit(0)
-    start_channel(parent_disconnected)
+    protocol_output = sys.stdout.buffer
+    sys.stdout = sys.stderr
     import uvicorn
 
     class SupervisedServer(uvicorn.Server):
@@ -22,8 +23,13 @@ if __name__ == '__main__':
             if not self.should_exit:
                 ready(self.config.port)
 
-    server = SupervisedServer(uvicorn.Config('api.main:app', host='127.0.0.1',
-        port=int(sys.argv[1]), log_level='info'))
+    config = uvicorn.Config('api.main:app', host='127.0.0.1',
+        port=int(sys.argv[1]), log_level='info')
+    # Import numerical/business DLLs before the stdin reader can hold the
+    # Windows CRT descriptor lock. Keep import logs off the JSON output pipe.
+    config.load()
+    start_channel(parent_disconnected, output=protocol_output)
+    server = SupervisedServer(config)
     server.run()
     # The supervised stdin reader can still be blocked. Uvicorn has finished
     # lifespan cleanup; do not finalize Python's buffered stdin under that thread.

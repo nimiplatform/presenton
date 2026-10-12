@@ -26,7 +26,11 @@ def test_bundled_icon_index_has_one_note_per_icon_and_reuses_vectors(monkeypatch
         assert len({note['memory'].split('\n', 1)[0] for note in notes}) == 1512
         assert len(calls) == 96
         assert len(first) == len(set(first)) == 20
-        assert all('/thin/' in url for url in first)
+        # Equal test vectors can rank any catalog entry in the first 20.
+        # The bundled book-open-user icon has only the bold name; its thin
+        # asset is named book-user, so the existing missing-weight fallback
+        # must remain valid rather than making this test randomly fail.
+        assert all('/thin/' in url or url.endswith('/bold/book-open-user-bold.svg') for url in first)
         second = asyncio.run(IconFinderService().search_icons('growth', k=20, weight='bold'))
         assert len(second) == len(set(second)) == 20
         assert all('/bold/' in url for url in second)

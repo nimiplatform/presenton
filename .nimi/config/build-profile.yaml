@@ -3,6 +3,12 @@ profile_role: developer-workflow-input
 test_command: pnpm run test:app
 build_command: pnpm run build:electron:production
 targets:
+  windows-x86_64:
+    build_command: pnpm run build:electron:production
+    os: windows
+    arch: x86_64
+    payload_path: dist-electron-package/presenton-shell-win32-x64
+    runtime_entry: payload/presenton-shell.exe
   macos-aarch64:
     build_command: pnpm run build:electron:macos
     os: macos

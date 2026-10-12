@@ -72,11 +72,11 @@ export class PresentonBackend {
       const browserManifest = path.join(browserRoot, 'presenton-runtime.json');
       const exportExecutable = existsSync(browserManifest) ? path.resolve(browserRoot, JSON.parse(readFileSync(browserManifest, 'utf8')).executable) : '';
       if (exportExecutable && (!exportExecutable.startsWith(browserRoot + path.sep) || !existsSync(exportExecutable))) throw new Error('Presenton export browser is incomplete; run pnpm setup:export');
-      const python = this.options.production ? path.join(this.options.appRoot, 'resources', 'presenton-worker', 'presenton-worker')
+      const python = this.options.production ? path.join(this.options.appRoot, 'resources', 'presenton-worker', process.platform === 'win32' ? 'presenton-worker.exe' : 'presenton-worker')
         : path.join(backendRoot, '.venv', process.platform === 'win32' ? 'Scripts/python.exe' : 'bin/python');
       const args = this.options.production ? [String(port)] : ['nimi_worker.py', String(port)];
       const child = spawn(python, args, {
-        cwd: backendRoot, stdio: ['pipe', 'pipe', 'pipe'], detached: process.platform !== 'win32',
+        cwd: backendRoot, stdio: ['pipe', 'pipe', 'pipe'], detached: process.platform !== 'win32', windowsHide: true,
         env: { ...helperEnvironment(), PRESENTON_HOST_KEY: key, APP_DATA_DIRECTORY: dataDirectory,
           TEMP_DIRECTORY: path.join(dataDirectory, 'tmp'), USER_CONFIG_PATH: path.join(dataDirectory, 'business-settings.json'),
           CAN_CHANGE_KEYS: 'false', DISABLE_AUTH: 'true', LITEPARSE_NODE_BINARY: process.execPath, ELECTRON_RUN_AS_NODE: '1',
@@ -95,7 +95,7 @@ export class PresentonBackend {
         child.stdin.write(JSON.stringify(value) + '\n', 'utf8');
       };
       await new Promise<void>((resolve, reject) => {
-        const timeout = setTimeout(() => reject(new Error('Presenton backend startup timed out')), 120000);
+        const timeout = setTimeout(() => reject(new Error(`Presenton backend startup timed out. ${stderr.slice(-1500)}`)), 120000);
         const fail = (error: Error) => { clearTimeout(timeout); reject(error); };
         child.once('error', fail);
         child.once('exit', (code) => {

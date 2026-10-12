@@ -9,6 +9,7 @@ import {
   runBundledPresentationExport,
 } from "@/lib/run-bundled-presentation-export";
 import { authStatusForRequest } from "@/lib/server-auth-role";
+import { canonicalExportDownloadUrl } from '@/lib/export-download-url';
 
 function isValidFormat(value: unknown): value is BundledPresentationExportFormat {
   return value === "pdf" || value === "pptx";
@@ -47,7 +48,7 @@ function buildExportDownloadUrl(outPath: string, appDataDirectory: string): stri
     throw new Error("Export finished outside the configured exports directory.");
   }
 
-  return `/api/export-presentation/file?name=${encodeURIComponent(relativePath)}`;
+  return canonicalExportDownloadUrl(relativePath);
 }
 
 async function moveExportIntoOwnerDirectory(

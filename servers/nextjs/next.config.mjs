@@ -17,6 +17,10 @@ const nextConfig = {
   outputFileTracingIncludes: {
     "/*": ["../../node_modules/.pnpm/semver@*/node_modules/semver/**/*"],
   },
+  outputFileTracingExcludes: {
+    "/*": ["../../.nimi/**/*", "../../.cache/**/*", "../fastapi/**/*",
+      "../../resources/**/*", "../../electron/**/*", "../../presentation-export/**/*"],
+  },
   async headers() {
     // Sandboxed template previews have an opaque origin. These bundled fonts
     // are public assets; business data and APIs keep their Host access checks.

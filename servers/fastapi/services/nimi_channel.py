@@ -29,12 +29,13 @@ class NimiCallError(RuntimeError):
         self.retryable = frame.get("retryable") is True
 
 
-def start_channel(on_disconnect=None) -> None:
+def start_channel(on_disconnect=None, *, output=None) -> None:
     global _output, _on_disconnect
     _on_disconnect = on_disconnect
     if _output is not None:
         raise RuntimeError("Presenton worker channel is already started")
-    _output = sys.stdout.buffer
+    sys.stderr.reconfigure(encoding="utf-8")
+    _output = sys.stdout.buffer if output is None else output
     sys.stdout = sys.stderr
     threading.Thread(target=_read, name="presenton-host", daemon=True).start()
 

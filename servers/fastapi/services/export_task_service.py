@@ -249,7 +249,8 @@ class ExportTaskService:
     @staticmethod
     def _resolve_trusted_runtime_path(path_or_url: str) -> str | None:
         parsed = urlparse(path_or_url)
-        candidate = unquote(parsed.path) if parsed.scheme else path_or_url
+        # A Windows drive letter is a local absolute path, not a URL scheme.
+        candidate = path_or_url if os.path.isabs(path_or_url) else unquote(parsed.path) if parsed.scheme else path_or_url
         if parsed.scheme == "file" and os.name == "nt" and candidate.startswith("/"):
             candidate = candidate[1:]
 
