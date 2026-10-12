@@ -7,9 +7,9 @@ source-development environment. The App always loads its own packaged native
 carrier. Source Runtime peer identity and installed-App/session admission remain
 verified; no workspace carrier replacement or trust-check bypass is used.
 
-Catalog AI acceptance for this new artifact is pending publication and admission;
-earlier development and installed-artifact results below retain their stated
-versions and limitations.
+Catalog AI acceptance passed on macOS arm64 using the official [0.9.11-beta.7 Release](https://github.com/nimiplatform/presenton/releases/tag/v0.9.11-beta.7), [admitted by Registry PR #79](https://github.com/nimiplatform/nimi-app-registry/pull/79), downloaded and updated through source Nimi Home. The two-slide AI-generated document and its outline edits survived the Catalog update. In beta.7, a new Nimi AI image edit generated and saved a teal-bird background. After quitting and relaunching from Home, the renderer port changed from 59878 to 60174 and the image still loaded. Saved asset references are relative to the App proxy. PDF and PPTX exports from the restarted App both contain two slides; the PDF was rendered and visually checked, and the PPTX contains the exact generated image bytes.
+
+Local screenshots and final exports are in `.nimi/local/released-dependencies-20261012/catalog-presenton-0.9.11-beta.7*`; the accepted document is `b3878a21-ba83-4a2e-a763-88e072b7399d`. This fixes beta.6's ephemeral-port image references for new image edits; older broken references can be replaced through the editor. Windows interactive acceptance and other unrun AI paths remain **NOT-VERIFIED**. These results supersede the earlier Catalog limitation; historical results below retain their stated versions.
 
 # Presenton on Nimi
 
