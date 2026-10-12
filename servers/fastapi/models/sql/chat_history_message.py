@@ -47,3 +47,4 @@ class ChatHistoryMessageModel(SQLModel, table=True):
         )
     )
     tool_calls: Optional[list[str]] = Field(sa_column=Column(JSON), default=None)
+    nimi_output_items: Optional[list[dict]] = Field(sa_column=Column(JSON), default=None)

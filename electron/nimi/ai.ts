@@ -8,14 +8,18 @@ const IMAGE_TYPES = new Set(['image/png', 'image/jpeg', 'image/webp', 'image/gif
 
 function reviveOutput(item: any) {
   if (item.type === 'reasoning-continuity') {
-    return { ...item, carrier: { ...item.carrier, payload: Uint8Array.from(item.carrier.payload) } };
+    const encoded = item.carrier.payload;
+    if (typeof encoded !== 'string' || !encoded) throw new Error('Invalid presentation continuity payload');
+    const bytes = Buffer.from(encoded, 'base64');
+    if (bytes.toString('base64') !== encoded) throw new Error('Invalid presentation continuity encoding');
+    return { ...item, carrier: { ...item.carrier, payload: bytes } };
   }
   return item;
 }
 
 function serializeOutput(item: any) {
   return item.type === 'reasoning-continuity'
-    ? { ...item, carrier: { ...item.carrier, payload: Array.from(item.carrier.payload) } }
+    ? { ...item, carrier: { ...item.carrier, payload: Buffer.from(item.carrier.payload).toString('base64') } }
     : item;
 }
 
@@ -60,7 +64,7 @@ export async function consumePresentationAI(
         messages.push({ role: message.role, content });
       }
     }
-    const model = createNimiLocalAppTextModel(services.ai);
+    const model = createNimiLocalAppTextModel(services.ai, { executionMode: 'sync' });
     const input = { messages, tools: payload.tools, toolChoice: payload.toolChoice,
       responseFormat: payload.responseFormat, parameters: payload.parameters, signal } as NimiGenerateTextRequest;
     const events = await model.streamText!(input);
@@ -77,7 +81,8 @@ export async function consumePresentationAI(
       outputItems: (result.outputItems ?? []).map(serializeOutput), finishReason: result.finishReason };
   }
   if (operation === 'embed') {
-    const result = await services.ai.scenario.execute({ type: 'text-embed', inputs: payload.inputs }, { signal });
+    if (payload.purpose !== 'retrieval-document' && payload.purpose !== 'retrieval-query') throw new Error('Invalid embedding retrieval purpose');
+    const result = await services.ai.scenario.execute({ type: 'text-embed', inputs: payload.inputs, purpose: payload.purpose }, { signal });
     if (result.output.type !== 'text-embed' || !result.output.spaceId) throw new Error('Nimi returned no valid embedding space');
     return result.output;
   }

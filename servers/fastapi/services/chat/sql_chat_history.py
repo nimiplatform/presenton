@@ -68,15 +68,16 @@ async def load_messages(
     presentation_id: uuid.UUID | None = None,
     template_id: str | None = None,
     conversation_id: uuid.UUID,
-) -> list[dict[str, str]]:
+) -> list[dict[str, Any]]:
     rows = await load_messages_with_meta(
         session,
         presentation_id=presentation_id,
         template_id=template_id,
         conversation_id=conversation_id,
+        include_outputs=True,
     )
     return [
-        {"role": row["role"], "content": row["content"]}
+        {"role": row["role"], "content": row["content"], **({"nimi_output_items": row["nimi_output_items"]} if "nimi_output_items" in row else {})}
         for row in rows
         if isinstance(row.get("role"), str) and isinstance(row.get("content"), str)
     ]
@@ -88,6 +89,7 @@ async def load_messages_with_meta(
     presentation_id: uuid.UUID | None = None,
     template_id: str | None = None,
     conversation_id: uuid.UUID,
+    include_outputs: bool = False,
 ) -> list[dict[str, Any]]:
     resource_clause = _resource_filter(
         presentation_id=presentation_id,
@@ -114,6 +116,8 @@ async def load_messages_with_meta(
         created = _serialize_created_at(row.created_at)
         if created:
             entry["created_at"] = created
+        if include_outputs and row.nimi_output_items is not None:
+            entry["nimi_output_items"] = row.nimi_output_items
         out.append(entry)
     return out
 
@@ -124,7 +128,7 @@ async def replace_messages(
     presentation_id: uuid.UUID | None = None,
     template_id: str | None = None,
     conversation_id: uuid.UUID,
-    messages: list[dict[str, str]],
+    messages: list[dict[str, Any]],
 ) -> None:
     resource_clause = _resource_filter(
         presentation_id=presentation_id,
@@ -160,6 +164,7 @@ async def replace_messages(
                 role=role,
                 content=content,
                 created_at=created_at,
+                nimi_output_items=message.get("nimi_output_items") if role == "assistant" else None,
             )
         )
         next_position += 1
@@ -196,6 +201,7 @@ async def append_turn(
     user_message: str,
     assistant_message: str,
     tool_calls: list[str] | None = None,
+    nimi_output_items: list[dict] | None = None,
 ) -> None:
     resource_clause = _resource_filter(
         presentation_id=presentation_id,
@@ -231,6 +237,7 @@ async def append_turn(
             content=assistant_message,
             created_at=now + timedelta(microseconds=1),
             tool_calls=tool_calls or None,
+            nimi_output_items=nimi_output_items,
         )
     )
     await session.flush()

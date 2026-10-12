@@ -188,12 +188,12 @@ async def generate_presentation_structure(
         )
         structure_schema = prepare_schema_for_validation(
             response_model.model_json_schema(),
-            strict=False,
+            strict=True,
         )
         response_format = JSONSchemaResponse(
             name="response",
             json_schema=structure_schema,
-            strict=False,
+            strict=True,
         )
 
         content = await generate_structured_with_schema_retries(
@@ -202,7 +202,7 @@ async def generate_presentation_structure(
             messages=messages,
             response_format=response_format,
             json_schema=structure_schema,
-            strict=False,
+            strict=True,
             validate_schema=True,
             disconnect_checker=disconnect_checker,
         )

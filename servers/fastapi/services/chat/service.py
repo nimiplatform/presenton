@@ -10,7 +10,7 @@ from typing import Any, Literal
 
 import dirtyjson  # type: ignore[import-untyped]
 from fastapi import HTTPException
-from services.nimi_llm import get_client  # type: ignore[import-not-found]
+from services.nimi_llm import get_client, model_output_items, NimiAssistantMessage
 from llmai.shared import (  # type: ignore[import-not-found]
     AssistantMessage,
     AssistantToolCall,
@@ -92,12 +92,14 @@ class PresentationChatService:
             presentation_type=presentation_type,
         )
         self._tools = ChatTools(self._memory, mode=chat_mode)
+        self._assistant_output_items = None
 
     async def generate_reply(
         self,
         user_message: str,
         attachments: list[ChatAttachment] | None = None,
     ) -> ChatTurnResult:
+        self._assistant_output_items = None
         self._tools.set_turn_context(user_message)
         conversation_id, messages, persisted_user_message = await self._prepare_turn_context(
             user_message,
@@ -116,6 +118,7 @@ class PresentationChatService:
         user_message: str,
         attachments: list[ChatAttachment] | None = None,
     ) -> AsyncGenerator[tuple[ChatStreamEventType, ChatStreamEventValue], None]:
+        self._assistant_output_items = None
         self._tools.set_turn_context(user_message)
         yield "status", "Reading deck context"
         conversation_id, messages, persisted_user_message = await self._prepare_turn_context(
@@ -232,6 +235,7 @@ class PresentationChatService:
                 continue
 
             response_text = "".join(round_content_chunks)
+            self._assistant_output_items = model_output_items(completion_chunk)
             if not response_text and completion_chunk:
                 response_text = extract_text(getattr(completion_chunk, "content", None))
             if not response_text:
@@ -364,6 +368,7 @@ class PresentationChatService:
             user_message=self._strip_ui_context_prefix(user_message) or user_message,
             assistant_message=response_text,
             tool_calls=tool_calls,
+            **({"nimi_output_items": self._assistant_output_items} if self._assistant_output_items is not None else {}),
         )
         await self._sql_session.commit()
 
@@ -395,6 +400,7 @@ class PresentationChatService:
                 raise handle_llm_client_exceptions(exc)
 
             if not response.tool_calls:
+                self._assistant_output_items = model_output_items(response)
                 response_text = extract_text(response.content) or (
                     "I could not generate a response for that request."
                 )
@@ -449,6 +455,7 @@ class PresentationChatService:
             LOGGER.warning("Final no-tool synthesis call failed", exc_info=True)
             return None
 
+        self._assistant_output_items = model_output_items(response)
         return extract_text(response.content)
 
     @staticmethod
@@ -885,5 +892,5 @@ class PresentationChatService:
                 content = PresentationChatService._strip_ui_context_prefix(content)
                 messages.append(UserMessage(content=content))
             elif role == "assistant":
-                messages.append(AssistantMessage(content=[content]))
+                messages.append(NimiAssistantMessage(content=[content], nimi_output_items=item.get("nimi_output_items")))
         return messages

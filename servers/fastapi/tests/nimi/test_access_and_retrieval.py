@@ -22,7 +22,8 @@ def test_retrieval_preserves_notes_and_isolates_embedding_spaces(monkeypatch, tm
     from services import nimi_memory
     monkeypatch.setenv('APP_DATA_DIRECTORY', str(tmp_path))
     space = ['space-a']
-    def embedding(inputs):
+    def embedding(inputs, *, purpose):
+        assert purpose in {"retrieval-query", "retrieval-document"}
         return {'spaceId': space[0], 'vectors': [[1.0, 0.0] for text in inputs]}
     monkeypatch.setattr(nimi_memory, 'embed', embedding)
     store = nimi_memory.PresentationMemory()

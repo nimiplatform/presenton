@@ -18,6 +18,7 @@ def test_unicode_schema_and_whitespace_are_not_rewritten(monkeypatch):
     assert output[0].chunk == '  中文\n'
     assert output[-1].content == '  中文\n'
     assert captured[0][1]['responseFormat']['schema'] == schema
+    assert captured[0][1]['responseFormat']['strict'] is False
     assert captured[0][1]['messages'][1]['content'][0]['text'] == '中文 café'
     assert 'model' not in captured[0][1]
 

@@ -16,8 +16,9 @@ from qdrant_client import QdrantClient, models
 from services.nimi_channel import request
 
 
-def embed(inputs):
-    result = request("embed", {"inputs": inputs})
+# @nimi-authority: rule.nimi.runtime.ai-provider.embedding-retrieval-purpose
+def embed(inputs, *, purpose):
+    result = request("embed", {"inputs": inputs, "purpose": purpose})
     if not result.get("spaceId") or len(result.get("vectors", [])) != len(inputs):
         raise RuntimeError("Nimi returned incomplete embeddings")
     return result
@@ -62,7 +63,7 @@ class PresentationMemory:
         notes = self.get_all(user_id=scope, limit=10000)["results"]
         if not notes:
             return {"results": []}
-        current = embed([query])
+        current = embed([query], purpose="retrieval-query")
         space = current["spaceId"]
         collection = "presentation_" + hashlib.sha256(space.encode()).hexdigest()[:24]
         with self.lock:
@@ -72,7 +73,7 @@ class PresentationMemory:
             missing = [note for note in notes if note["id"] not in existing]
             for offset in range(0, len(missing), 16):
                 batch = missing[offset:offset+16]
-                encoded = embed([note["memory"] for note in batch])
+                encoded = embed([note["memory"] for note in batch], purpose="retrieval-document")
                 if encoded["spaceId"] != space:
                     raise RuntimeError("Embedding configuration changed; retry document retrieval")
                 self.vectors.upsert(collection, [models.PointStruct(id=note["id"], vector=vector,

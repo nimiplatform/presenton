@@ -13,7 +13,8 @@ def test_bundled_icon_index_has_one_note_per_icon_and_reuses_vectors(monkeypatch
     monkeypatch.setattr('services.mem0_oss_memory.get_shared_mem0_client', lambda: store)
     calls = []
 
-    def embed(inputs):
+    def embed(inputs, *, purpose):
+        assert purpose in {"retrieval-query", "retrieval-document"}
         calls.append(list(inputs))
         return {'spaceId': 'icon-test', 'vectors': [[1.0, 0.0] for _ in inputs]}
 
@@ -48,7 +49,7 @@ def test_catalog_insert_rolls_back_and_initialization_can_retry(monkeypatch, tmp
         assert store.get_all(user_id='icons')['results'] == []
         assert service._index is None
         store.db.execute('DROP TRIGGER fail_catalog')
-        monkeypatch.setattr(nimi_memory, 'embed', lambda inputs: {'spaceId': 'retry', 'vectors': [[1.0] for _ in inputs]})
+        monkeypatch.setattr(nimi_memory, 'embed', lambda inputs, **_kwargs: {'spaceId': 'retry', 'vectors': [[1.0] for _ in inputs]})
         assert service._search('growth', 1)
         assert len(store.get_all(user_id='icons', limit=10000)['results']) == 1512
     finally:

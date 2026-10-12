@@ -44,6 +44,7 @@ class ChatConversationStore:
         user_message: str,
         assistant_message: str,
         tool_calls: list[str] | None = None,
+        nimi_output_items: list[dict] | None = None,
     ) -> None:
         await sql_chat_history.append_turn(
             self._sql,
@@ -52,6 +53,7 @@ class ChatConversationStore:
             user_message=user_message,
             assistant_message=assistant_message,
             tool_calls=tool_calls,
+            **({"nimi_output_items": nimi_output_items} if nimi_output_items is not None else {}),
         )
         await CHAT_MEMORY_STORE.store_chat_turn(
             presentation_id=presentation_id,

@@ -8,12 +8,24 @@ from __future__ import annotations
 import base64
 import json
 import threading
+from pydantic import Field
 
 from llmai.shared import (
     AssistantMessage, AssistantToolCall, ResponseStreamCompletionChunk,
     ResponseStreamContentChunk, TextContentPart,
 )
 from services import nimi_channel
+
+
+class NimiAssistantMessage(AssistantMessage):
+    # Display content and canonical model output are separate App facts. The
+    # latter contains JSON-safe bytes and is persisted in the SQL checkpoint.
+    nimi_output_items: list[dict] | None = Field(default=None, exclude=True)
+
+
+def model_output_items(response):
+    messages = getattr(response, "messages", None) or []
+    return getattr(messages[-1], "nimi_output_items", None) if messages else None
 
 
 def _schema(value):
@@ -63,7 +75,10 @@ class NimiLLMClient:
         if role == "assistant":
             calls = list(message.tool_calls or [])
             key = tuple(call.id for call in calls)
-            if key and key in self._outputs:
+            saved = getattr(message, "nimi_output_items", None)
+            if saved is not None:
+                result["outputItems"] = saved
+            elif key and key in self._outputs:
                 result["outputItems"] = self._outputs[key]
             else:
                 result["outputItems"] = [
@@ -141,7 +156,8 @@ class NimiLLMClient:
                     if calls:
                         self._outputs[tuple(call.id for call in calls)] = value["outputItems"]
                     content = value["text"]
-                    assistant = AssistantMessage(content=[TextContentPart(text=content)] if content else [], tool_calls=calls)
+                    assistant = NimiAssistantMessage(content=[TextContentPart(text=content)] if content else [], tool_calls=calls,
+                        nimi_output_items=value["outputItems"])
                     yield ResponseStreamCompletionChunk(content=content, tool_calls=calls,
                         messages=[*messages, assistant], finish_reason=value["finishReason"])
         if stream:

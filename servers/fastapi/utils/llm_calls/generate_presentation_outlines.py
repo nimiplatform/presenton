@@ -360,12 +360,12 @@ async def generate_ppt_outline(
             )
         outline_schema = prepare_schema_for_validation(
             response_model.model_json_schema(),
-            strict=False,
+            strict=True,
         )
         response_format = JSONSchemaResponse(
             name="response",
             json_schema=outline_schema,
-            strict=False,
+            strict=True,
         )
         emitted_content = False
         async for event in stream_generate_events(
