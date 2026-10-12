@@ -267,3 +267,38 @@ Cloud Services. If a connection was recreated, select its current reference in
 Presenton Settings → AI models. Reopen Presenton from Nimi for a retired session.
 For App issues, include the App version and failed action in the repository's
 issue tracker; exclude credentials and private presentation content.
+
+## Published Nimi dependency update — 2026-10-12
+
+[Presenton 0.9.11-beta.5](https://github.com/nimiplatform/presenton/releases/tag/v0.9.11-beta.5)
+is published as an immutable macOS arm64 Release and admitted through
+[Registry PR #71](https://github.com/nimiplatform/nimi-app-registry/pull/71).
+The Registry update channel remains `beta`. This update uses public npm SDK
+`0.21.0`, Kit/native `0.19.0`, App Tools `0.12.0`, and nimi-coding `0.6.5`;
+the release lockfile has no local Nimi tarball or source-workspace overrides.
+These results supersede the public-release and admission limitations of the
+earlier local-package acceptance described above.
+
+Host and renderer type checks, 12 repository tests, 894 Python tests and
+61 renderer tests passed. The production build, package validation, managed
+release workflow and Registry candidate/finalization checks passed. The
+Registry verified the published artifact hashes and provenance.
+
+Real macOS acceptance used Desktop-supervised Electron with the public npm
+dependencies. Presenton generated and saved a two-slide Standard deck with
+two generated images, restored it after reload, and exported PDF and PPTX
+through its Export menu. The two-page PDF was rendered and visually checked;
+the PPTX archive passed integrity checks and contains two slides with editable
+text. The accepted presentation is `dba0d897-cd34-4143-8cf6-2cea089436d6`;
+local exports and screenshots are under
+`.nimi/local/released-dependencies-20261012/`.
+
+**NOT-VERIFIED:** AI use in the released Presenton package installed through
+Home Catalog. In this source-development environment, a released Vane package
+downloaded, installed and launched through Catalog, but its published native
+carrier rejected the development Runtime with `runtime-service-untrusted`.
+The existing Host/Kit carrier selection and Runtime trust profile need a
+platform-level correction for this test scenario; that logic was not changed
+by this App update. The user explicitly approved completing publication and
+admission with this limitation recorded. This release declares only macOS
+arm64; no Windows acceptance is claimed.
