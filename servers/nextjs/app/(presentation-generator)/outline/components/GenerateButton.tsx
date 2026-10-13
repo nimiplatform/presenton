@@ -8,6 +8,7 @@ interface GenerateButtonProps {
   streamState: { isStreaming: boolean; isLoading: boolean };
   selectedTemplateId: string | null;
   onSubmit: () => void;
+  ready: boolean;
 }
 
 const GenerateButton: React.FC<GenerateButtonProps> = ({
@@ -15,12 +16,13 @@ const GenerateButton: React.FC<GenerateButtonProps> = ({
   streamState,
   selectedTemplateId,
   onSubmit,
+  ready,
 }) => {
   const isDisabled =
     loadingState.isLoading ||
     streamState.isLoading ||
     streamState.isStreaming ||
-    !selectedTemplateId;
+    !selectedTemplateId || !ready;
 
   const getButtonText = () => {
     if (loadingState.isLoading) return loadingState.message;

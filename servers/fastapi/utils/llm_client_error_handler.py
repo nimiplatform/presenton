@@ -41,10 +41,12 @@ def handle_llm_client_exceptions(e: Exception) -> HTTPException:
             "ai-connector-not-found": "The selected Nimi connection no longer exists. Select its current connection in Settings → AI models.",
             "ai-provider-auth-failed": "The model connection needs authorization in Nimi Cloud Services.",
             "ai-text-behavior-unsupported": "The selected Nimi model does not support this request. Choose a model with the required structured output, tools or image input in Settings → AI models.",
+            "ai-output-invalid": "The model response did not pass Nimi's output validation. Your prompt and settings are saved. Review the AI model settings before trying again.",
         }.get(e.reason_code, str(e))
         error = HTTPException(status_code=422, detail=explanation)
         error.retryable = e.retryable
         error.error_type = e.reason_code
+        error.diagnostic_stage = e.diagnostic_stage
         return error
     if isinstance(e, HTTPException):
         if _is_codex_provider() and e.status_code in {401, 403}:

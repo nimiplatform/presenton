@@ -2,6 +2,8 @@
 
 Adds Windows build targets, native resource paths and the packaged Python executable suffix. Fixes the reproduced Python startup deadlock, Windows drive-path handling, download URL separators and npm launcher invocation. The Host supplies Next's private backend-state path explicitly; production tracing excludes development state and packaging rejects its presence. Optional JavaScript/CSS debugging source maps are omitted from resources to fit GitHub's per-asset limit. Uses public SDK 0.21.0, Kit/native 0.19.3 and App Tools 0.12.2. Packaged API startup and supervised manual Chinese slide editing, reload, PDF export and PPTX export passed. Full AI presentation generation has recorded output-validation failures and is not reported as passed. New public admission requires the publisher's safety declaration.
 
+Failed outlines now retain their error and complete generation settings. Reopening restores the selected language and slide count without rerunning a failed model request; a visible Try again action creates a separate attempt. Continue remains disabled until a valid outline is ready. Safe structured-output diagnostic categories from Nimi are preserved without copying model content or private provider details.
+
 # Nimi release 0.9.11-beta.7 — Durable generated images
 
 The supervised Host now keeps generated App asset references relative to its renderer proxy. AI-edited slide images no longer persist the ephemeral renderer port and remain loadable after a new App process starts. Public Kit/native 0.19.2 and protected Runtime identity checks remain unchanged.

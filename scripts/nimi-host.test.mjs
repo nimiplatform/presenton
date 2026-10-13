@@ -1,6 +1,13 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { helperEnvironment } from '../electron/nimi/backend.ts';
+import { helperEnvironment, textOutputDiagnosticStage } from '../electron/nimi/backend.ts';
+
+test('structured output diagnostics carry only public finite categories', () => {
+  assert.equal(textOutputDiagnosticStage({ reasonCode: 'ai-output-invalid', reasonMetadata: {
+    diagnostic_stage: 'text_json_schema_min_length', prompt: 'private', response: 'private' } }), 'text_json_schema_min_length');
+  assert.equal(textOutputDiagnosticStage({ reasonCode: 'ai-output-invalid', reasonMetadata: { diagnostic_stage: 'private provider response' } }), undefined);
+  assert.equal(textOutputDiagnosticStage({ reasonCode: 'other', reasonMetadata: { diagnostic_stage: 'text_json_schema_min_length' } }), undefined);
+});
 
 test('business helper environment excludes protected and provider credentials', () => {
   const names = ['NIMI_RUNTIME_ENDPOINT', 'NIMI_ACCESS_TOKEN', 'OPENAI_API_KEY'];

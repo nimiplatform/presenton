@@ -34,6 +34,7 @@ class SSEErrorResponse(BaseModel):
     source: str | None = None
     status_code: int | None = None
     error_type: str | None = None
+    diagnostic_stage: str | None = None
     retryable: bool | None = None
     completed_slides: int | None = None
     total_slides: int | None = None

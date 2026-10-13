@@ -32,6 +32,8 @@ import {
   VerbosityType,
 } from "../../upload/type";
 import { PresentationGenerationApi } from "../../services/api/presentation-generation";
+import { DashboardApi } from "../../services/api/dashboard";
+import { restoreOutlineDraft } from "@/lib/outline-draft";
 import { useOutlineManagement } from "../hooks/useOutlineManagement";
 import { useOutlineStreaming } from "../hooks/useOutlineStreaming";
 import { usePresentationGeneration } from "../hooks/usePresentationGeneration";
@@ -132,13 +134,15 @@ const OutlinePage: React.FC = () => {
     savedConfig ? normalizeOutlineConfig(savedConfig) : DEFAULT_OUTLINE_CONFIG
   );
   const [isRegeneratingOutline, setIsRegeneratingOutline] = useState(false);
+  const [loadedPresentationId, setLoadedPresentationId] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [hasOutlineStreamFinished, setHasOutlineStreamFinished] =
     useState(false);
 
   const hasSelectedTemplate = selectedTemplateId !== null;
   const streamState = useOutlineStreaming(
     presentation_id,
-    !isTemplateStage && hasSelectedTemplate
+    !isTemplateStage && hasSelectedTemplate && loadedPresentationId === presentation_id
   );
   const { handleDragEnd, handleAddSlide } = useOutlineManagement(outlines);
   const { loadingState, handleSubmit } = usePresentationGeneration(
@@ -148,15 +152,35 @@ const OutlinePage: React.FC = () => {
 
   const documentPaths = useMemo(() => getDocumentPaths(files), [files]);
   const outlineControlsBusy =
-    isRegeneratingOutline || streamState.isLoading || streamState.isStreaming;
+    loadedPresentationId !== presentation_id || isRegeneratingOutline || streamState.isLoading || streamState.isStreaming;
+  const outlineError = loadError || streamState.error;
   const isOutlineReady =
-    hasSelectedTemplate && hasOutlineStreamFinished && !outlineControlsBusy;
+    hasSelectedTemplate && hasOutlineStreamFinished && !outlineControlsBusy && !outlineError && outlines.length > 0;
   const isOutlineAssistantVisible = !isTemplateStage && hasSelectedTemplate;
-  const isRegenerateDisabled = !isOutlineReady;
+  const isRegenerateDisabled = !isOutlineReady && !streamState.error;
   const outlineStreamFinished =
     !isTemplateStage &&
     !outlineControlsBusy &&
     (outlines.length > 0 || streamState.statusMessage === "Outline ready");
+
+  useEffect(() => {
+    if (!presentation_id) return;
+    let canceled = false;
+    setLoadedPresentationId(null);
+    setLoadError(null);
+    dispatch(clearOutlines());
+    DashboardApi.getPresentation(presentation_id, { cache: "no-store" })
+      .then((presentation) => {
+        if (canceled) return;
+        dispatch(setPptGenUploadState(restoreOutlineDraft(presentation)));
+        dispatch(setOutlines(getOutlinesFromResponse(presentation.outlines)));
+        setLoadedPresentationId(presentation_id);
+      })
+      .catch((error) => {
+        if (!canceled) setLoadError(error instanceof Error ? error.message : "Could not restore this presentation. Reload to try again.");
+      });
+    return () => { canceled = true; };
+  }, [dispatch, presentation_id]);
 
   useEffect(() => {
     if (queryPresentationId && queryPresentationId !== storedPresentationId) {
@@ -230,7 +254,7 @@ const OutlinePage: React.FC = () => {
       return;
     }
 
-    if (!isOutlineReady) {
+    if (!isOutlineReady && !streamState.error) {
       return;
     }
 
@@ -319,6 +343,7 @@ const OutlinePage: React.FC = () => {
     presentation_id,
     router,
     selectedTemplateId,
+    streamState.error,
   ]);
 
   const handleUpdateOutline = (index: number, newContent: string) => {
@@ -421,7 +446,19 @@ const OutlinePage: React.FC = () => {
               />
 
               <div className="mt-12">
-                <OutlineContent
+                {outlineError && (
+                  <div role="alert" className="mb-6 rounded-xl border border-red-200 bg-red-50 p-5 text-sm text-red-950">
+                    <h2 className="mb-2 font-semibold">Outline generation stopped</h2>
+                    <p>{outlineError}</p>
+                    {streamState.diagnosticStage && <details className="mt-2"><summary>Technical details</summary><code>{streamState.diagnosticStage}</code></details>}
+                    <p className="mt-2">Your prompt and settings are kept. Nothing is generated automatically when you reopen this failed draft.</p>
+                    <div className="mt-4 flex gap-4">
+                      <a href="/settings" className="underline">Open AI model settings</a>
+                      {streamState.error && <button type="button" disabled={outlineControlsBusy} onClick={handleRegenerateOutline} className="font-semibold underline">Try again</button>}
+                    </div>
+                  </div>
+                )}
+                {!outlineError && <OutlineContent
                   outlines={outlines}
                   isLoading={streamState.isLoading}
                   isStreaming={streamState.isStreaming}
@@ -431,7 +468,7 @@ const OutlinePage: React.FC = () => {
                   onDragEnd={handleDragEnd}
                   onAddSlide={handleAddSlide}
                   onUpdateOutline={handleUpdateOutline}
-                />
+                />}
               </div>
             </main>
           </div>
@@ -479,6 +516,7 @@ const OutlinePage: React.FC = () => {
           <div className="pointer-events-none fixed bottom-6 left-5 right-5 z-50 flex justify-center sm:left-10 sm:right-10 lg:left-0 lg:right-[369px]">
             <div className="pointer-events-auto">
               <GenerateButton
+                ready={isOutlineReady}
                 loadingState={loadingState}
                 streamState={streamState}
                 selectedTemplateId={selectedTemplateId}

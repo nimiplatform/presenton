@@ -18,6 +18,13 @@ class PresentationWithSlides(BaseModel):
     updated_at: datetime
     tone: Optional[str] = None
     verbosity: Optional[str] = None
+    instructions: Optional[str] = None
+    file_paths: Optional[List[str]] = None
+    outlines: Optional[dict] = None
+    outline_error: Optional[dict] = None
+    include_table_of_contents: bool = False
+    include_title_slide: bool = True
+    web_search: bool = False
     slides: List[SlideModel]
     fonts: Optional[Any] = None
     theme: Optional[dict[str, Any]] = None

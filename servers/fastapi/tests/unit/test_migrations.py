@@ -118,6 +118,7 @@ def test_upgrade_from_baseline_stamp_skips_existing_theme_column(tmp_path):
         assert version == migrations.REVISION_HEAD
         assert "theme" in columns
         assert "fonts" in columns
+        assert "outline_error" in columns
         assert "async_tasks" in tables
         assert "api_keys" in tables
         assert "access_tokens" not in tables

@@ -27,6 +27,7 @@ class NimiCallError(RuntimeError):
         self.reason_code = frame.get("reasonCode", "")
         self.action_hint = frame.get("actionHint", "")
         self.retryable = frame.get("retryable") is True
+        self.diagnostic_stage = frame.get("diagnosticStage")
 
 
 def start_channel(on_disconnect=None, *, output=None) -> None:

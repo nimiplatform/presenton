@@ -6,6 +6,19 @@ import path from 'node:path';
 import type { NimiElectronAppBusinessServices } from '@nimiplatform/kit/shell/electron/main';
 import { consumePresentationAI } from './ai.js';
 
+const TEXT_OUTPUT_STAGES = new Set([
+  'request', 'envelope', 'finish_reason', 'message_content', 'json_decode', 'compile',
+  'min_length', 'max_length', 'min_items', 'max_items', 'type', 'required', 'additional_properties', 'validation',
+].map((stage) => `text_json_schema_${stage}`));
+
+export function textOutputDiagnosticStage(error: unknown): string | undefined {
+  if (!error || typeof error !== 'object') return undefined;
+  const failure = error as { reasonCode?: string; reasonMetadata?: Record<string, unknown> };
+  const stage = failure.reasonMetadata?.diagnostic_stage;
+  return failure.reasonCode === 'ai-output-invalid' && typeof stage === 'string' && TEXT_OUTPUT_STAGES.has(stage)
+    ? stage : undefined;
+}
+
 export async function availablePort(): Promise<number> {
   const server = createServer();
   await new Promise<void>((resolve, reject) => { server.once('error', reject); server.listen(0, '127.0.0.1', resolve); });
@@ -123,7 +136,7 @@ export class PresentonBackend {
             void consumePresentationAI(services, message.operation, message.payload, controller.signal,
               (text) => send({ id: message.id, type: 'delta', text }))
               .then((value) => { controller.signal.throwIfAborted(); send({ id: message.id, type: 'result', value }); })
-              .catch((error) => send({ id: message.id, type: 'error', message: error instanceof Error ? error.message : String(error), reasonCode: error?.reasonCode, actionHint: error?.actionHint, retryable: error?.retryable === true }))
+              .catch((error) => send({ id: message.id, type: 'error', message: error instanceof Error ? error.message : String(error), reasonCode: error?.reasonCode, actionHint: error?.actionHint, retryable: error?.retryable === true, diagnosticStage: textOutputDiagnosticStage(error) }))
               .finally(() => this.pending.delete(message.id));
           }
         });

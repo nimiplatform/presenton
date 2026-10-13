@@ -28,6 +28,8 @@ export const useOutlineStreaming = (
   const [activeSlideIndex, setActiveSlideIndex] = useState<number | null>(null);
   const [highestActiveIndex, setHighestActiveIndex] = useState<number>(-1);
   const [statusMessage, setStatusMessage] = useState(DEFAULT_STATUS_MESSAGE);
+  const [error, setError] = useState<string | null>(null);
+  const [diagnosticStage, setDiagnosticStage] = useState<string | null>(null);
   const outlinesRef = useRef<{ content: string }[]>(outlines);
   const prevSlidesRef = useRef<{ content: string }[]>([]);
   const activeIndexRef = useRef<number>(-1);
@@ -44,6 +46,8 @@ export const useOutlineStreaming = (
       setActiveSlideIndex(null);
       setHighestActiveIndex(-1);
       setStatusMessage(message);
+      setError(null);
+      setDiagnosticStage(null);
       prevSlidesRef.current = [];
       activeIndexRef.current = -1;
       highestIndexRef.current = -1;
@@ -115,7 +119,12 @@ export const useOutlineStreaming = (
           data = JSON.parse(event.data);
         } catch {
           if (!scheduleRetry("invalid SSE payload")) {
+            isClosed = true;
+            closeEventSource();
+            clearRetryTimer();
+            dispatch(setOutlines([]));
             resetStreamingState();
+            setError("Failed to read the outline response. Please try again.");
             notify.error(
               "Stream parse failed",
               "Failed to parse outline stream response."
@@ -193,7 +202,12 @@ export const useOutlineStreaming = (
               retryCount = 0;
             } catch {
               if (!scheduleRetry("failed to parse complete payload")) {
+                isClosed = true;
+                closeEventSource();
+                clearRetryTimer();
+                dispatch(setOutlines([]));
                 resetStreamingState();
+                setError("Failed to read the completed outline. Please try again.");
                 notify.error("Parse failed", "Failed to parse presentation data.");
               }
             }
@@ -215,6 +229,8 @@ export const useOutlineStreaming = (
               resetStreamingState();
               closeEventSource();
               clearRetryTimer();
+              setError(data.detail || "Outline generation failed. Review the AI model settings and try again.");
+              setDiagnosticStage(typeof data.diagnostic_stage === "string" ? data.diagnostic_stage : null);
               notify.error("Outline generation stopped", data.detail || "Check the AI model settings and try again.");
               break;
             }
@@ -232,6 +248,7 @@ export const useOutlineStreaming = (
               dispatch(setOutlines([]));
               resetStreamingState();
               closeEventSource();
+              setError(data.detail || "The outline connection failed. Please try again.");
               notify.error(
                 "Outline streaming failed",
                 data.detail ||
@@ -249,6 +266,7 @@ export const useOutlineStreaming = (
           dispatch(setOutlines([]));
           resetStreamingState();
           closeEventSource();
+          setError("The outline connection failed. Please try again.");
           notify.error(
             "Connection failed",
             "Failed to connect to the server. Please try again."
@@ -258,6 +276,8 @@ export const useOutlineStreaming = (
     };
 
     setStatusMessage(DEFAULT_STATUS_MESSAGE);
+    setError(null);
+    setDiagnosticStage(null);
     setIsStreaming(true);
     setIsLoading(true);
     openStream();
@@ -275,5 +295,7 @@ export const useOutlineStreaming = (
     activeSlideIndex,
     highestActiveIndex,
     statusMessage,
+    error,
+    diagnosticStage,
   };
 };

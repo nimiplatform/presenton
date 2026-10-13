@@ -67,6 +67,7 @@ async def update_outline(
         raise HTTPException(status_code=404, detail="Presentation not found")
 
     presentation.outlines = outline.model_dump(mode="json")
+    presentation.outline_error = None
     presentation.n_slides = len(outline.slides)
     presentation.title = get_presentation_title_from_presentation_outline(outline)
 
@@ -103,6 +104,13 @@ async def stream_outlines(
 
         return StreamingResponse(saved_outline(), media_type="text/event-stream")
 
+    if presentation.outline_error:
+        async def saved_failure():
+            if not await request.is_disconnected():
+                yield SSEErrorResponse(**presentation.outline_error).to_string()
+
+        return StreamingResponse(saved_failure(), media_type="text/event-stream")
+
     search_route, actual_search_provider = get_web_search_route()
     LOGGER.info(
         "Starting outline stream: presentation_id=%s web_search_enabled=%s "
@@ -119,6 +127,15 @@ async def stream_outlines(
     )
 
     temp_dir = TEMP_FILE_SERVICE.create_temp_dir()
+
+    async def fail_outline(detail, error_type=None, diagnostic_stage=None):
+        # Retrying is a user decision. A reconnect/reload must not dispatch
+        # another chargeable model call after a terminal result.
+        failure = SSEErrorResponse(detail=str(detail), error_type=error_type, diagnostic_stage=diagnostic_stage, retryable=False)
+        presentation.outline_error = failure.model_dump(exclude_none=True)
+        sql_session.add(presentation)
+        await sql_session.commit()
+        return failure.to_string()
 
     async def inner():
         if await request.is_disconnected():
@@ -205,7 +222,7 @@ async def stream_outlines(
                 continue
 
             if isinstance(chunk, HTTPException):
-                yield SSEErrorResponse(detail=str(chunk.detail), retryable=getattr(chunk, "retryable", None), error_type=getattr(chunk, "error_type", None)).to_string()
+                yield await fail_outline(chunk.detail, getattr(chunk, "error_type", None), getattr(chunk, "diagnostic_stage", None))
                 return
 
             yield SSEResponse(
@@ -221,9 +238,7 @@ async def stream_outlines(
             )
         except Exception as e:
             traceback.print_exc()
-            yield SSEErrorResponse(
-                detail=f"Failed to generate presentation outlines. Please try again. {str(e)}",
-            ).to_string()
+            yield await fail_outline("The model returned an unreadable outline. Review the model settings and try again.")
             return
 
         presentation_outlines = PresentationOutlineModel(
@@ -240,12 +255,10 @@ async def stream_outlines(
             n_slides_to_generate is not None
             and len(presentation_outlines.slides) < n_slides_to_generate
         ):
-            yield SSEErrorResponse(
-                detail=(
-                    "Failed to generate presentation outlines with requested "
-                    "number of slides. Please try again."
-                )
-            ).to_string()
+            yield await fail_outline(
+                "Failed to generate presentation outlines with requested "
+                "number of slides. Please try again."
+            )
             return
 
         if n_slides_to_generate is not None:
@@ -257,6 +270,7 @@ async def stream_outlines(
             presentation.n_slides = len(presentation_outlines.slides)
 
         presentation.outlines = presentation_outlines.model_dump()
+        presentation.outline_error = None
         presentation.title = get_presentation_title_from_presentation_outline(
             presentation_outlines
         )
@@ -276,12 +290,24 @@ async def stream_outlines(
     async def rollback_stream_session():
         await sql_session.rollback()
 
+    async def record_stream_failure(error):
+        failed = await sql_session.get(PresentationModel, id)
+        if failed is not None:
+            failed.outline_error = SSEErrorResponse(
+                detail=str(error.detail) if isinstance(error, HTTPException) else "Failed to generate presentation outlines. Please try again.",
+                error_type=getattr(error, "error_type", None), retryable=False,
+            ).model_dump(exclude_none=True)
+            sql_session.add(failed)
+            await sql_session.commit()
+        return {"retryable": False}
+
     return StreamingResponse(
         safe_sse_stream(
             inner(),
             logger=LOGGER,
             error_detail="Failed to generate presentation outlines. Please try again.",
             on_error=rollback_stream_session,
+            error_metadata=record_stream_failure,
         ),
         media_type="text/event-stream",
     )
