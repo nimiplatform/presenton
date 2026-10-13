@@ -13,9 +13,24 @@ existing Desktop-supervised development registration and its own CDP target,
 the saved five-slide Chinese deck, generated image and selected notebook icon
 reopened successfully. Earlier AI generation, editing and PDF/PowerPoint export
 evidence below retains its stated scope and content-quality limitations.
-Local installed-package acceptance of beta.9 is NOT-VERIFIED while the native
-Home window is unavailable for interaction; this is not a claim of a completed
-release or Catalog admission.
+On October 14, Home imported the complete Windows beta.9 package from bc15fb2b
+and launched it against installed Nimi 0.2.4-rc.1. The isolated installed
+workspace opened correctly; the original development workspace remains intact.
+A new two-slide Chinese Q58 request completed outline and slide generation.
+Renaming saved successfully. Native PDF and PowerPoint export produced
+`.nimi/local/windows-installed-beta9.pdf` (235437 bytes, two 960-by-540 pages)
+and `.pptx` (113515 bytes, two slides, valid ZIP CRC). Both PDF pages were
+rendered and visually checked; Chinese glyphs and layout remain readable.
+Poppler reported a Type 3 glyph bounding-box warning without an observed
+rendering defect. PowerPoint desktop rendering was not tested. Normal close
+and Home relaunch restored the renamed deck and both pages.
+
+The generated first page used English despite the selected Chinese language;
+its original output is retained as a content-quality limitation. The second
+page preserved the supplied Chinese collection rules. This bounded installation
+and export acceptance does not certify generated content. The annotated
+v0.9.11-beta.9 tag starts the existing formal release workflow; publication and
+Registry admission are separate from these local results.
 
 # 0.9.11-beta.8 — Windows presentation workflows
 
