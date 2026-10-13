@@ -59,3 +59,17 @@ def test_catalog_insert_rolls_back_and_initialization_can_retry(monkeypatch, tmp
     finally:
         store.vectors.close()
         store.db.close()
+
+
+def test_icon_search_reports_typed_nimi_configuration_failure(monkeypatch):
+    from fastapi import HTTPException
+    from api.v1.ppt.endpoints import icons
+    from services.nimi_channel import NimiCallError
+    async def unavailable(*args, **kwargs):
+        raise NimiCallError({'reasonCode': 'ai-config-not-found', 'message': 'ai-config-not-found'})
+    monkeypatch.setattr(icons.ICON_FINDER_SERVICE, 'search_icons', unavailable)
+    with pytest.raises(HTTPException) as caught:
+        asyncio.run(icons.search_icons('book', 20, None, None))
+    assert caught.value.status_code == 422
+    assert caught.value.error_type == 'ai-config-not-found'
+    assert 'Settings' in caught.value.detail

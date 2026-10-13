@@ -2,6 +2,8 @@ from typing import List
 
 from fastapi import APIRouter, Query
 from services.icon_finder_service import ICON_FINDER_SERVICE
+from services.nimi_channel import NimiCallError
+from utils.llm_client_error_handler import handle_llm_client_exceptions
 from utils.icon_weights import DEFAULT_ICON_TYPE, normalize_icon_type
 
 ICONS_ROUTER = APIRouter(prefix="/icons", tags=["Icons"])
@@ -14,8 +16,11 @@ async def search_icons(
     icon_type: str | None = Query(default=None),
     icon_weight: str | None = Query(default=None),
 ):
-    return await ICON_FINDER_SERVICE.search_icons(
-        query,
-        limit,
-        weight=normalize_icon_type(icon_type or icon_weight or DEFAULT_ICON_TYPE),
-    )
+    try:
+        return await ICON_FINDER_SERVICE.search_icons(
+            query,
+            limit,
+            weight=normalize_icon_type(icon_type or icon_weight or DEFAULT_ICON_TYPE),
+        )
+    except NimiCallError as error:
+        raise handle_llm_client_exceptions(error) from error

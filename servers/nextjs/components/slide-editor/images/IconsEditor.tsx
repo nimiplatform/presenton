@@ -138,6 +138,7 @@ const IconsEditor = ({
     icon_prompt?.[0] || ""
   );
   const [loading, setLoading] = useState(true);
+  const [searchError, setSearchError] = useState<string | null>(null);
   const [selectedWeight, setSelectedWeight] = useState<IconWeight>(
     normalizeIconWeight(getIconWeightFromUrl(currentIconUrl))
   );
@@ -171,6 +172,7 @@ const IconsEditor = ({
       }
 
       setLoading(true);
+      setSearchError(null);
 
       try {
         const data = await PresentationGenerationApi.searchIcons({
@@ -190,6 +192,7 @@ const IconsEditor = ({
       } catch (error: unknown) {
         if (requestIdRef.current === requestId) {
           console.error("Error fetching icons:", error);
+          setSearchError(error instanceof Error ? error.message : "Failed to fetch icons. Please try again.");
           notify.error(
             "Could not load icons",
             error instanceof Error
@@ -261,7 +264,6 @@ const IconsEditor = ({
         <DialogPrimitive.Content
           data-template-v2-floating-toolbar="true"
           data-inline-edit-ignore="true"
-          style={{ translate: "none" }}
           className="fixed left-1/2 top-1/2 z-[10051] h-[calc(100dvh-24px)] w-[calc(100vw-24px)] -translate-x-1/2 -translate-y-1/2 font-syne text-[#191919] outline-none sm:h-[min(70vh,650px)] sm:min-h-[500px] sm:w-[min(calc(100vw-160px),977px)]"
           onPointerDown={(event) => event.stopPropagation()}
         >
@@ -482,13 +484,13 @@ const IconsEditor = ({
                       </div>
                     ) : (
                       <div className="flex h-full min-h-[220px] items-center justify-center rounded-[14px] border border-dashed border-[#E1E1E5] bg-[#F9FAFB] px-6 text-center">
-                        <div>
+                        <div role={searchError ? "alert" : undefined}>
                           <Search className="mx-auto mb-3 size-7 text-[#B7B8BE]" />
                           <p className="text-[13px] font-medium text-[#666]">
-                            No icons found
+                            {searchError ? "Could not load icons" : "No icons found"}
                           </p>
                           <p className="mt-1 text-[12px] text-[#808080]">
-                            Try a different search term.
+                            {searchError || "Try a different search term."}
                           </p>
                         </div>
                       </div>
