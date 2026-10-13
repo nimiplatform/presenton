@@ -13,6 +13,7 @@ import {
   MAX_NUMBER_OF_SLIDES,
 } from "@/utils/presentationLimits";
 import { store } from "@/store/store";
+import { LanguageType } from "../../upload/type";
 
 const DEFAULT_LOADING_STATE: LoadingState = {
   message: "",
@@ -23,7 +24,8 @@ const DEFAULT_LOADING_STATE: LoadingState = {
 
 export const usePresentationGeneration = (
   presentationId: string | null,
-  selectedTemplateId: string | null
+  selectedTemplateId: string | null,
+  selectedLanguage: LanguageType | null
 ) => {
   const dispatch = useDispatch();
   const router = useRouter();
@@ -108,6 +110,8 @@ export const usePresentationGeneration = (
         presentation_id: presentationId,
         outlines: preparedOutlines,
         layout: selectedTemplateId,
+        language:
+          selectedLanguage === LanguageType.Auto ? "" : selectedLanguage ?? "",
       });
 
       if (response) {
@@ -146,6 +150,7 @@ export const usePresentationGeneration = (
     dispatch,
     router,
     selectedTemplateId,
+    selectedLanguage,
     pathname,
   ]);
 

@@ -1,3 +1,26 @@
+# 0.9.11-beta.10 — Preserve the selected slide language
+
+The prepare endpoint previously cleared the selected language before final
+slide generation. Installed beta.9 showed Chinese in outline review but saved
+an empty language and produced an English first slide. This is an App request
+and persistence defect, not solely a model-quality finding.
+
+Final preparation now receives the current outline language choice and retains
+the stored choice when no change is supplied. Selecting Auto explicitly asks
+generation to follow the reviewed outline. Regression checks cover preservation,
+changing a prior choice and selecting Auto. Type checking and the complete App
+suite pass: 13 repository, 905 backend and 65 renderer tests (983 total).
+
+In the real Desktop-supervised development App on Windows, an English outline
+was changed to Chinese before Continue. The observed prepare request and saved
+presentation both retained `Chinese (Simplified - 中文, 汉语)`. Both generated
+slides use Chinese and remained after a reload. The original output is retained
+in presentation `6ed1bd13-8fe4-4024-9f7e-a33a551163cb`: its oversized first
+heading and unsupported Chinese transliteration of He Lan still require
+editorial correction, so this is language-transfer acceptance, not a claim of
+perfect generated content. Packaging and installed beta.10 acceptance remain
+pending; beta.9 candidate #101 is draft until a verified replacement is available.
+
 # 0.9.11-beta.9 — Complete Windows renderer dependencies
 
 Uses a hoisted dependency layout with the unchanged frozen package versions.
@@ -26,13 +49,15 @@ rendering defect. PowerPoint desktop rendering was not tested. Normal close
 and Home relaunch restored the renamed deck and both pages.
 
 The generated first page used English despite the selected Chinese language;
-its original output is retained as a content-quality limitation. The second
+its original output is retained. Subsequent investigation found the App clearing
+the selected language in preparation; see the beta.10 repair above. The second
 page preserved the supplied Chinese collection rules. This bounded installation
 and export acceptance does not certify generated content. The annotated
 v0.9.11-beta.9 tag points to the tested implementation. The [formal release](https://github.com/nimiplatform/presenton/releases/tag/v0.9.11-beta.9)
 is immutable and published for both platforms. Exact published packages, source
 licenses and build provenance passed Registry preparation; [candidate #101](https://github.com/nimiplatform/nimi-app-registry/pull/101)
-replaces withdrawn #96. Human admission and Catalog installation remain pending.
+replaces withdrawn #96 but is now draft due to the language defect. Human
+admission and Catalog installation remain pending.
 
 # 0.9.11-beta.8 — Windows presentation workflows
 

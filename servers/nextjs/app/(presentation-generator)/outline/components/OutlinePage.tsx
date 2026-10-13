@@ -147,7 +147,8 @@ const OutlinePage: React.FC = () => {
   const { handleDragEnd, handleAddSlide } = useOutlineManagement(outlines);
   const { loadingState, handleSubmit } = usePresentationGeneration(
     presentation_id,
-    selectedTemplateId
+    selectedTemplateId,
+    draftConfig.language
   );
 
   const documentPaths = useMemo(() => getDocumentPaths(files), [files]);

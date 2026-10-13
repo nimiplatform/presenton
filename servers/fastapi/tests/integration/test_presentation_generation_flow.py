@@ -625,17 +625,27 @@ def test_prepare_presentation_preserves_payload_icon_weight():
     stream_layout = presentation_endpoint._get_presentation_stream_layout(presentation)
     assert stream_layout.icon_weight == "thin"
     assert stream_layout.icon_type == "thin"
-    assert presentation.language == ""
+    assert presentation.language == "English"
 
 
-def test_prepare_presentation_clears_stale_language_for_reviewed_outlines():
+@pytest.mark.parametrize(
+    "stored_language, requested_language, expected_language",
+    [
+        ("Chinese (Simplified - 中文, 汉语)", None, "Chinese (Simplified - 中文, 汉语)"),
+        ("Spanish (Español)", "Chinese (Simplified - 中文, 汉语)", "Chinese (Simplified - 中文, 汉语)"),
+        ("Spanish (Español)", "", ""),
+    ],
+)
+def test_prepare_presentation_preserves_selected_language_for_reviewed_outlines(
+    stored_language, requested_language, expected_language
+):
     presentation_id = uuid.uuid4()
     template_id = str(uuid.uuid4())
     presentation = PresentationModel(
         id=presentation_id,
         content="global warming deck",
         n_slides=1,
-        language="Spanish (Español)",
+        language=stored_language,
         tone="default",
         verbosity="standard",
         instructions=None,
@@ -663,12 +673,13 @@ def test_prepare_presentation_clears_stale_language_for_reviewed_outlines():
                 presentation_id=presentation_id,
                 outlines=[SlideOutlineModel(content="## 全球变暖的原因")],
                 layout=template_id,
+                language=requested_language,
                 sql_session=session,
             )
         )
 
     assert response.presentation_id == presentation_id
-    assert presentation.language == ""
+    assert presentation.language == expected_language
 
 
 def test_prepare_presentation_rejects_too_many_outlines():
