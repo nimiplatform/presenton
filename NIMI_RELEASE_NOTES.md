@@ -1,4 +1,4 @@
-# 0.9.11-beta.8 — Windows candidate (unreleased)
+# 0.9.11-beta.8 — Windows presentation workflows
 
 Adds Windows build targets, native resource paths and the packaged Python executable suffix. Fixes the reproduced Python startup deadlock, Windows drive-path handling, download URL separators and npm launcher invocation. The Host supplies Next's private backend-state path explicitly; production tracing excludes development state and packaging rejects its presence. Optional JavaScript/CSS debugging source maps are omitted from resources to fit GitHub's per-asset limit. Uses public SDK 0.21.0, Kit/native 0.19.3 and App Tools 0.12.2. Packaged API startup and supervised five-slide Chinese AI generation, editing, reload, PDF/PPTX export and real generated-image replacement passed within the documented scope. The publisher's safety declaration is present.
 
