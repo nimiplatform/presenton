@@ -18,8 +18,12 @@ slides use Chinese and remained after a reload. The original output is retained
 in presentation `6ed1bd13-8fe4-4024-9f7e-a33a551163cb`: its oversized first
 heading and unsupported Chinese transliteration of He Lan still require
 editorial correction, so this is language-transfer acceptance, not a claim of
-perfect generated content. Packaging and installed beta.10 acceptance remain
-pending; beta.9 candidate #101 is draft until a verified replacement is available.
+perfect generated content. The full Windows production build and pack pass,
+including the actual packaged Next resources starting outside the checkout.
+The annotated v0.9.11-beta.10 tag points to tested source 0dddaed9 and starts
+the managed release workflow. Installed beta.10 acceptance remains pending
+while a user-owned Windows Security prompt blocks native interaction; beta.9
+candidate #101 is draft until a verified replacement is available.
 
 # 0.9.11-beta.9 — Complete Windows renderer dependencies
 
