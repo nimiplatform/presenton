@@ -14,7 +14,7 @@ from llmai.shared import (
 )
 
 from models.presentation_outline_model import PresentationOutlineModel
-from constants.presentation import MAX_NUMBER_OF_SLIDES, MAX_OUTLINE_CONTENT_WORDS
+from constants.presentation import MAX_NUMBER_OF_SLIDES, MAX_OUTLINE_CONTENT_WORDS, FIXED_OUTLINE_MIN_CHARACTERS, FIXED_OUTLINE_MAX_CHARACTERS
 from utils.get_dynamic_models import get_presentation_outline_model_with_n_slides
 from utils.llm_calls.generate_web_search_query import generate_web_search_query
 from utils.llm_client_error_handler import handle_llm_client_exceptions
@@ -67,6 +67,7 @@ def get_system_prompt(
     verbosity: Optional[str] = None,
     include_title_slide: bool = True,
     include_table_of_contents: bool = False,
+    n_slides: Optional[int] = None,
 ):
     verbosity_instruction = (
         "Slide content should be around 20 words but detailed enough to generate a good slide."
@@ -77,6 +78,17 @@ def get_system_prompt(
             else "Slide content should be around 40 words but detailed enough to generate a good slide."
         )
     )
+    if n_slides is not None:
+        verbosity_instruction += (
+            f"\nEvery slide's content string must contain {FIXED_OUTLINE_MIN_CHARACTERS} to "
+            f"{FIXED_OUTLINE_MAX_CHARACTERS} Unicode characters, including its Markdown title. "
+            "This schema length requirement takes priority over the approximate word target, "
+            "including for Chinese and other languages without spaces between words. "
+            "Meet the minimum by explaining the supplied facts and their limits; never invent "
+            "facts or add meaningless padding. Do not infer a person's duties, future plans, "
+            "measurement methods or completion guarantees from a name or project title. "
+            "Check each content string before returning the JSON."
+        )
 
     title_slide_instruction = (
         "Include presenter name in first slide."
@@ -231,6 +243,7 @@ def get_messages(
                 verbosity,
                 include_title_slide,
                 include_table_of_contents,
+                n_slides,
             ),
         ),
         UserMessage(

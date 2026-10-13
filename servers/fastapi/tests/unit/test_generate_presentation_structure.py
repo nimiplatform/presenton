@@ -55,3 +55,15 @@ def test_slides_markdown_structure_prompt_includes_both_intent_sources():
 
     assert "# User Instructions:\nUse a bar chart" in prompt
     assert "# Original User Request:\nClimate presentation" in prompt
+
+
+def test_regular_layout_selection_receives_fixed_cardinality_and_fact_constraints():
+    layout = _layout()
+    layout.slides[0].json_schema = {'type': 'object', 'properties': {
+        'members': {'type': 'array', 'minItems': 4, 'maxItems': 4,
+                    'items': {'type': 'string'}}}}
+    messages = get_messages(layout, 1, '负责人只有林岚。')
+    assert '"minItems": 4' in str(messages[1].content)
+    assert '"maxItems": 4' in str(messages[1].content)
+    assert 'A single named person is not a multi-person team' in str(messages[0].content)
+    assert 'Do not select layouts requiring generated images' in str(messages[0].content)

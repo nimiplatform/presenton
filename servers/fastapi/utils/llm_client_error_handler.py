@@ -39,6 +39,7 @@ def handle_llm_client_exceptions(e: Exception) -> HTTPException:
         explanation = {
             "ai-config-not-found": "Choose models for Presenton in Settings → AI models before generating content.",
             "ai-connector-not-found": "The selected Nimi connection no longer exists. Select its current connection in Settings → AI models.",
+            "ai-remote-model-catalog-stale": "Nimi's model list changed. Choose your model again from the current list in Settings → AI models, then save the selection before trying again.",
             "ai-provider-auth-failed": "The model connection needs authorization in Nimi Cloud Services.",
             "ai-text-behavior-unsupported": "The selected Nimi model does not support this request. Choose a model with the required structured output, tools or image input in Settings → AI models.",
             "ai-output-invalid": "The model response did not pass Nimi's output validation. Your prompt and settings are saved. Review the AI model settings before trying again.",

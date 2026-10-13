@@ -83,6 +83,21 @@ def test_system_prompt_forbids_sources_in_outlines():
     assert 'Never refer to "this presentation"' in prompt
 
 
+def test_fixed_count_prompt_explains_the_unchanged_character_contract_for_chinese():
+    from utils.get_dynamic_models import get_presentation_outline_model_with_n_slides
+    from utils.schema_utils import get_schema_validation_errors
+    response_model = get_presentation_outline_model_with_n_slides(5)
+    schema = response_model.model_json_schema()
+    content_schema = schema['$defs']['SlideOutlineModelWithNSlides']['properties']['content']
+    prompt = outline_module.get_system_prompt(n_slides=5)
+    assert f"{content_schema['minLength']} to {content_schema['maxLength']} Unicode characters" in prompt
+    assert 'including for Chinese' in prompt
+    assert 'never invent' in prompt
+    short = {'slides': [{'content': '## 蓝鸟743\n负责人林岚。'} for _ in range(5)]}
+    assert get_schema_validation_errors(schema, short, strict=True)
+    assert 'Unicode characters' not in outline_module.get_system_prompt(n_slides=None)
+
+
 def test_system_prompt_requires_content_only_outlines_for_visual_instructions():
     prompt = outline_module.get_system_prompt()
 

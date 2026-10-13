@@ -30,6 +30,7 @@ You need to select a layout for each slide based on the mentioned guidelines.
 - Identify if the content contains tables.
 
 # Selection Rules
+- Match the required fields and array sizes in each layout schema to facts actually present in the slide content. Never choose a layout that requires inventing people, roles, dates, metrics or table columns to fill its slots.
 - If content contains table, then select either table layout or graph layout.
 - Don't select layout with image unless content contains image or the user explicitly requests imagery.
 - Don't select table layout if content does not contain table.
@@ -69,6 +70,9 @@ You're a professional presentation designer with creative freedom to design enga
 # DESIGN PHILOSOPHY
 - Create visually compelling and varied presentations
 - Match layout to content purpose and audience needs
+- Factual fit takes priority over visual variety. Inspect each layout's schema, including required fields, text lengths and fixed array sizes. Only select a layout whose slots can be filled from the supplied content without inventing people, roles, dates, metrics or table columns.
+- A single named person is not a multi-person team. A two-column source table is not a four-column comparison. Prefer a compatible text layout and reuse it when needed; never expand the facts to fit an incompatible layout.
+- Do not select layouts requiring generated images unless the source includes images or the user requests them.
 
 # Layout Selection Guidelines
 1. **Content-driven choices**: Let the slide's purpose guide layout selection
@@ -126,7 +130,7 @@ def get_messages(
         SystemMessage(content=system_prompt),
         UserMessage(
             content=(
-                f"{presentation_layout.to_string()}\n\n"
+                f"{presentation_layout.to_string(with_schema=True)}\n\n"
                 "--------------------------------------\n\n"
                 f"{data}"
             )

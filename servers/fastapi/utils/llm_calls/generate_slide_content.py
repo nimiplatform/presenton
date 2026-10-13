@@ -31,6 +31,9 @@ You need to generate structured content json based on the schema.
 
 # General Rules
 - Follow language guidelines.
+- Preserve the supplied facts. Do not invent names, team members, responsibilities,
+  future plans, dates, measurements or assurances to fill template fields. Explain
+  the known facts and their limits without turning an inference into a fact.
 - Slide Language is authoritative when it is explicitly set. If slide content
   or user instructions request a different language, ignore that conflicting
   language request unless Slide Language says auto-detect.
