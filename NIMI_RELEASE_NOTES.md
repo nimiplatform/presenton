@@ -20,10 +20,14 @@ heading and unsupported Chinese transliteration of He Lan still require
 editorial correction, so this is language-transfer acceptance, not a claim of
 perfect generated content. The full Windows production build and pack pass,
 including the actual packaged Next resources starting outside the checkout.
-The annotated v0.9.11-beta.10 tag points to tested source 0dddaed9 and starts
-the managed release workflow. Installed beta.10 acceptance remains pending
-while a user-owned Windows Security prompt blocks native interaction; beta.9
-candidate #101 is draft until a verified replacement is available.
+The annotated v0.9.11-beta.10 tag points to tested source 0dddaed9. Both targets
+are [published immutably](https://github.com/nimiplatform/presenton/releases/tag/v0.9.11-beta.10),
+and exact package bytes, source licenses and build provenance passed Registry
+preparation. The verified original Windows package is ready under
+`.nimi/local/published-beta10/`. [Draft candidate #103](https://github.com/nimiplatform/nimi-app-registry/pull/103)
+replaces withdrawn #101. Exact installed beta.10 acceptance remains pending
+while a user-owned Windows Security prompt blocks native interaction. Human
+admission and Catalog installation are not claimed.
 
 # 0.9.11-beta.9 — Complete Windows renderer dependencies
 
@@ -60,7 +64,7 @@ and export acceptance does not certify generated content. The annotated
 v0.9.11-beta.9 tag points to the tested implementation. The [formal release](https://github.com/nimiplatform/presenton/releases/tag/v0.9.11-beta.9)
 is immutable and published for both platforms. Exact published packages, source
 licenses and build provenance passed Registry preparation; [candidate #101](https://github.com/nimiplatform/nimi-app-registry/pull/101)
-replaces withdrawn #96 but is now draft due to the language defect. Human
+replaced #96 and was withdrawn in favor of beta.10 candidate #103. Human
 admission and Catalog installation remain pending.
 
 # 0.9.11-beta.8 — Windows presentation workflows
