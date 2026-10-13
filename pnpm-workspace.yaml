@@ -1,6 +1,7 @@
 packages:
   - .
   - servers/nextjs
+nodeLinker: hoisted
 onlyBuiltDependencies:
   - esbuild
   - sharp

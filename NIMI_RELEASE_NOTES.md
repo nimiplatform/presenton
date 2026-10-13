@@ -1,3 +1,22 @@
+# 0.9.11-beta.9 — Complete Windows renderer dependencies
+
+Uses a hoisted dependency layout with the unchanged frozen package versions.
+The previous Windows package flattened Next's pnpm links and failed to resolve
+`@swc/helpers/_/_interop_require_default` outside the checkout. Development now
+resolves Next from its package, and production packaging starts a copy of the
+actual standalone resources in an isolated temporary directory. This check
+reproduced the beta.8 failure and passes on the corrected Windows package.
+
+Type checking, 13 repository tests, 903 backend tests and 65 renderer tests pass.
+The Windows production build and package complete successfully. Through the
+existing Desktop-supervised development registration and its own CDP target,
+the saved five-slide Chinese deck, generated image and selected notebook icon
+reopened successfully. Earlier AI generation, editing and PDF/PowerPoint export
+evidence below retains its stated scope and content-quality limitations.
+Local installed-package acceptance of beta.9 is NOT-VERIFIED while the native
+Home window is unavailable for interaction; this is not a claim of a completed
+release or Catalog admission.
+
 # 0.9.11-beta.8 — Windows presentation workflows
 
 Adds Windows build targets, native resource paths and the packaged Python executable suffix. Fixes the reproduced Python startup deadlock, Windows drive-path handling, download URL separators and npm launcher invocation. The Host supplies Next's private backend-state path explicitly; production tracing excludes development state and packaging rejects its presence. Optional JavaScript/CSS debugging source maps are omitted from resources to fit GitHub's per-asset limit. Uses public SDK 0.21.0, Kit/native 0.19.3 and App Tools 0.12.2. Packaged API startup and supervised five-slide Chinese AI generation, editing, reload, PDF/PPTX export and real generated-image replacement passed within the documented scope. The publisher's safety declaration is present.

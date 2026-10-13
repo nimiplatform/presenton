@@ -1,4 +1,5 @@
 import { spawn } from 'node:child_process';
+import { verifyNextStandalone } from './verify-next-standalone.mjs';
 import { copyFile, cp, mkdir, mkdtemp, readFile, realpath, rm, writeFile, access } from 'node:fs/promises';
 import { createRequire } from 'node:module';
 import path from 'node:path';
@@ -180,6 +181,7 @@ try {
       const rendererRoot = path.join(destinationRoot, 'servers/nextjs/.next-production/standalone/servers/nextjs');
       await cp(path.join(appRoot, 'servers/nextjs/public'), path.join(rendererRoot, 'public'), { recursive: true, dereference: true });
       await cp(path.join(appRoot, 'servers/nextjs/.next-production/static'), path.join(rendererRoot, '.next-production/static'), { recursive: true });
+      await verifyNextStandalone(path.dirname(path.dirname(rendererRoot)));
     }],
     prune: false,
     quiet: true,

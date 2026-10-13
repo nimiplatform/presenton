@@ -12,11 +12,6 @@ const nextConfig = {
   // default. Keep the supervised business stream connected with a finite budget.
   experimental: { proxyTimeout: 600_000 },
   outputFileTracingRoot: path.resolve(nextjsRoot, "../.."),
-  // Next traces pnpm's hoisted semver alias without its target package. Include
-  // the installed target so the standalone server has no dangling dependency.
-  outputFileTracingIncludes: {
-    "/*": ["../../node_modules/.pnpm/semver@*/node_modules/semver/**/*"],
-  },
   outputFileTracingExcludes: {
     "/*": ["../../.nimi/**/*", "../../.cache/**/*", "../fastapi/**/*",
       "../../resources/**/*", "../../electron/**/*", "../../presentation-export/**/*"],
