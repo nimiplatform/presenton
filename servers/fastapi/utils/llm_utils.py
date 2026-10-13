@@ -393,7 +393,10 @@ async def generate_structured_with_schema_retries(
                 "Validation error after max fixes: %s",
                 formatted_validation_errors,
             )
-            raise HTTPException(status_code=422, detail="The model could not produce valid presentation content. Please try again or choose another model.")
+            failure = HTTPException(status_code=422, detail="The model could not produce valid presentation content. Please try again or choose another model.")
+            failure.retryable = False
+            failure.error_type = "presentation-schema-invalid"
+            raise failure
 
         LOGGER.warning(
             "Validation error, attempting fix %s/%s: %s",

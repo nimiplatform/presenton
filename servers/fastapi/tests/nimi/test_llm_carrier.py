@@ -160,3 +160,24 @@ def test_repeated_rejected_output_never_becomes_success(monkeypatch):
             messages=[UserMessage(content='Make a title')], response_format=JSONSchemaResponse(json_schema=schema, strict=False),
             json_schema=schema, validate_schema=True))
     assert len(calls) == 3
+
+
+def test_exhausted_template_validation_stops_sse_retries(monkeypatch):
+    import asyncio
+    import pytest
+    from fastapi import HTTPException
+    from utils import llm_utils
+    calls = []
+    async def invalid_content(*args, **kwargs):
+        calls.append(True)
+        return {'title': 'too long'}
+    monkeypatch.setattr(llm_utils, '_generate_structured_content', invalid_content)
+    schema = {'type': 'object', 'properties': {'title': {'type': 'string', 'maxLength': 3}}}
+    with pytest.raises(HTTPException) as caught:
+        asyncio.run(llm_utils.generate_structured_with_schema_retries(object(), 'text.generate',
+            messages=[UserMessage(content='Make a title')],
+            response_format=JSONSchemaResponse(json_schema=schema, strict=True),
+            json_schema=schema, validate_schema=True))
+    assert len(calls) == 4
+    assert caught.value.retryable is False
+    assert caught.value.error_type == 'presentation-schema-invalid'
