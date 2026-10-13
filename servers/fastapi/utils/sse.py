@@ -34,6 +34,8 @@ async def safe_sse_stream(
             metadata["retryable"] = exc.retryable
         if getattr(exc, "error_type", None):
             metadata["error_type"] = exc.error_type
+        if getattr(exc, "diagnostic_stage", None):
+            metadata["diagnostic_stage"] = exc.diagnostic_stage
         if error_metadata:
             try:
                 metadata.update(await error_metadata(exc))

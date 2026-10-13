@@ -92,6 +92,7 @@ class PresentationModel(SQLModel, table=True):
             title=self.title,
             file_paths=copy.deepcopy(self.file_paths),
             outlines=copy.deepcopy(self.outlines),
+            outline_error=copy.deepcopy(self.outline_error),
             layout=copy.deepcopy(self.layout),
             structure=copy.deepcopy(self.structure),
             instructions=self.instructions,

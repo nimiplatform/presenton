@@ -54,3 +54,32 @@ def test_presentation_response_preserves_all_outline_settings():
     for key in ('content', 'n_slides', 'language', 'instructions', 'file_paths', 'include_title_slide',
                 'include_table_of_contents', 'web_search', 'outline_error', 'outlines'):
         assert response[key] == value[key]
+
+
+def test_duplicating_failed_draft_preserves_failure_without_sharing_mutable_state():
+    presentation = PresentationModel(version=PresentationVersion.V2_STANDARD,
+        content='中文', n_slides=5, language='Chinese',
+        outline_error={'detail': 'Output failed', 'retryable': False})
+    duplicate = presentation.get_new_presentation()
+    assert duplicate.id != presentation.id
+    assert duplicate.outline_error == presentation.outline_error
+    assert duplicate.outline_error is not presentation.outline_error
+
+
+def test_slide_stream_preserves_the_same_safe_runtime_failure_stage():
+    import logging
+    from services.nimi_channel import NimiCallError
+    from utils.llm_client_error_handler import handle_llm_client_exceptions
+    from utils.sse import safe_sse_stream
+    async def failing():
+        raise handle_llm_client_exceptions(NimiCallError({
+            'reasonCode': 'ai-output-invalid', 'diagnosticStage': 'text_json_schema_type',
+            'message': 'ai-output-invalid', 'retryable': False,
+        }))
+        yield
+    async def run():
+        return [frame async for frame in safe_sse_stream(failing(), logger=logging.getLogger(__name__), error_detail='Slide generation failed')]
+    frame = json.loads(asyncio.run(run())[0].split('data: ', 1)[1])
+    assert frame['diagnostic_stage'] == 'text_json_schema_type'
+    assert frame['error_type'] == 'ai-output-invalid'
+    assert frame['retryable'] is False
