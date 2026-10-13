@@ -14,10 +14,14 @@ storage_policy:
   kind: app-owned-os-storage
   os_storage_disclosure:
     - path_pattern: ~/Library/Application Support/Presenton Nimi/workspaces/
-      purpose: Presentation databases, templates, uploaded documents, generated images and document retrieval caches, partitioned by the Nimi-managed App workspace identifier
+      purpose: Presentation databases, templates, uploaded documents, generated images
+        and document retrieval caches, partitioned by the Nimi-managed App
+        workspace identifier
       expected_size_band: 10 MB–10 GB depending on imported media
     - path_pattern: '%APPDATA%/Presenton Nimi/workspaces/'
-      purpose: Windows presentation databases, templates, uploaded documents, generated images and document retrieval caches, partitioned by the Nimi-managed App workspace identifier
+      purpose: Windows presentation databases, templates, uploaded documents,
+        generated images and document retrieval caches, partitioned by the
+        Nimi-managed App workspace identifier
       expected_size_band: 10 MB–10 GB depending on imported media
     - path_pattern: User-selected download destinations
       purpose: Exported PDF and PPTX presentations
@@ -27,10 +31,41 @@ local_development:
     renderer_origin: http://127.0.0.1:6016
     host_source_directory: electron/nimi
 metadata:
-  summary: Create, edit and export presentations with Nimi AI and Presenton's templates and slide editor.
+  summary: Create, edit and export presentations with Nimi AI and Presenton's
+    templates and slide editor.
   icon: electron/build/icon.iconset/icon_512x512.png
   readme: README.md
   release_notes: NIMI_RELEASE_NOTES.md
   author: Presenton contributors; Nimi adaptation contributors
   homepage_url: https://github.com/nimiplatform/presenton
   support_url: https://github.com/nimiplatform/presenton/issues
+safety_profile:
+  intended_audience: general
+  content_descriptors:
+    - unmoderated-shared-content
+  ai:
+    direct_interaction: true
+    interaction_notice: absent
+    risk_features: []
+    subject_notice: not-applicable
+    outputs:
+      - modality: text
+        exposure: exportable
+        publication_control: not-applicable
+        in_product_notice: absent
+        export_visible_marking: absent
+        machine_readable_marking: absent
+      - modality: image
+        exposure: exportable
+        publication_control: not-applicable
+        in_product_notice: absent
+        export_visible_marking: absent
+        machine_readable_marking: absent
+  data_practices:
+    publisher_direct_external_network: true
+    telemetry: []
+    third_party_account: optional
+    user_content_sharing: none
+    commercial_features: []
+    sensitive_data_categories: []
+  high_impact_decision_uses: []
