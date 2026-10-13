@@ -29,8 +29,10 @@ The generated first page used English despite the selected Chinese language;
 its original output is retained as a content-quality limitation. The second
 page preserved the supplied Chinese collection rules. This bounded installation
 and export acceptance does not certify generated content. The annotated
-v0.9.11-beta.9 tag starts the existing formal release workflow; publication and
-Registry admission are separate from these local results.
+v0.9.11-beta.9 tag points to the tested implementation. The [formal release](https://github.com/nimiplatform/presenton/releases/tag/v0.9.11-beta.9)
+is immutable and published for both platforms. Exact published packages, source
+licenses and build provenance passed Registry preparation; [candidate #101](https://github.com/nimiplatform/nimi-app-registry/pull/101)
+replaces withdrawn #96. Human admission and Catalog installation remain pending.
 
 # 0.9.11-beta.8 — Windows presentation workflows
 
