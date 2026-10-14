@@ -25,7 +25,12 @@ are [published immutably](https://github.com/nimiplatform/presenton/releases/tag
 and exact package bytes, source licenses and build provenance passed Registry
 preparation. The verified original Windows package is ready under
 `.nimi/local/published-beta10/`. [Candidate #103](https://github.com/nimiplatform/nimi-app-registry/pull/103)
-replaces withdrawn #101. Human admission and Catalog installation are not claimed.
+replaces withdrawn #101. On October 14 the user approved the existing
+dual-platform beta candidate; finalization passed and #103 merged. Installed
+Nimi 0.2.4 discovers the admitted version and its Catalog installation is queued
+behind Vane's slow download. Catalog installation and business acceptance remain
+NOT-VERIFIED until that task completes; the installed Imported results below
+remain separate evidence.
 
 On October 14, final installed Nimi 0.2.4 updated the imported beta.9 App to
 the exact published beta.10 Windows archive (SHA-256
