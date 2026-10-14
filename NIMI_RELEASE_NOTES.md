@@ -24,10 +24,25 @@ The annotated v0.9.11-beta.10 tag points to tested source 0dddaed9. Both targets
 are [published immutably](https://github.com/nimiplatform/presenton/releases/tag/v0.9.11-beta.10),
 and exact package bytes, source licenses and build provenance passed Registry
 preparation. The verified original Windows package is ready under
-`.nimi/local/published-beta10/`. [Draft candidate #103](https://github.com/nimiplatform/nimi-app-registry/pull/103)
-replaces withdrawn #101. Exact installed beta.10 acceptance remains pending
-while a user-owned Windows Security prompt blocks native interaction. Human
-admission and Catalog installation are not claimed.
+`.nimi/local/published-beta10/`. [Candidate #103](https://github.com/nimiplatform/nimi-app-registry/pull/103)
+replaces withdrawn #101. Human admission and Catalog installation are not claimed.
+
+On October 14, final installed Nimi 0.2.4 updated the imported beta.9 App to
+the exact published beta.10 Windows archive (SHA-256
+`9963d8966fa156969e24c81093e6564186418839aa341635f86874e4ff72ccc6`).
+Home launched its new release-directory Host, and the prior Q58 deck survived.
+A fresh English two-slide outline was changed to Simplified Chinese in review.
+The installed database retained `Chinese (Simplified - 中文, 汉语)` after
+Continue, and both final slides use Chinese. The title was saved as
+`Cedar Q58｜安装版中文验收`, presentation
+`386a02c5-3934-4d29-add0-a5e0b81d53d0`. Normal close and Home relaunch restored
+both pages, the title and the generated image on the new renderer port.
+This passes the installed language-transfer and data-retention checks.
+The raw output is preserved: headings wrap densely, some labels overlap, and
+the English outline expanded supplied facts into unsupported descriptions.
+Generated layout/content quality is not claimed as passing. Earlier beta.9
+native PDF/PPTX export evidence remains applicable to the unchanged export path;
+these exports were not repeated for beta.10.
 
 # 0.9.11-beta.9 — Complete Windows renderer dependencies
 
