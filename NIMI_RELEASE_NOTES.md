@@ -27,10 +27,19 @@ preparation. The verified original Windows package is ready under
 `.nimi/local/published-beta10/`. [Candidate #103](https://github.com/nimiplatform/nimi-app-registry/pull/103)
 replaces withdrawn #101. On October 14 the user approved the existing
 dual-platform beta candidate; finalization passed and #103 merged. Installed
-Nimi 0.2.4 discovers the admitted version and its Catalog installation is queued
-behind Vane's slow download. Catalog installation and business acceptance remain
-NOT-VERIFIED until that task completes; the installed Imported results below
-remain separate evidence.
+Nimi 0.2.4 downloaded and installed the original Catalog Windows package after
+the slow-transfer queue completed. Home launched its distinct Catalog
+release-directory Host with Nimi Access ready. A fresh two-page Simplified
+Chinese task completed its outline, final slides and imagery. The title was
+saved as `Catalog 资料整理验收`, presentation
+`8fc3d6e9-3700-45c2-9ab1-e377e23ca300`. Normal close and Home relaunch restored
+both pages, title and image on a new renderer port (56565 to 65251).
+Fresh Windows Catalog download/install, real generation and persistence pass.
+The actual output remains unedited: headings exceeded the requested short
+length and the template added a summary column; this does not certify output
+quality. No previous Catalog installation existed on this machine, so a Catalog
+N-to-N+1 update was not run. Imported upgrade/export results below retain their
+separate scope and were not relabeled as Catalog export tests.
 
 On October 14, final installed Nimi 0.2.4 updated the imported beta.9 App to
 the exact published beta.10 Windows archive (SHA-256
