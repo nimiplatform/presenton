@@ -13,6 +13,8 @@ const { spawn } = await import('node:child_process');
 declare const __NIMI_ELECTRON_PRODUCTION__: boolean;
 const production = __NIMI_ELECTRON_PRODUCTION__;
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+// Native presentation is separate from metadata.icon artwork shown in Nimi Home.
+const nativeAppIconPath = path.join(root, 'assets', 'native', process.platform === 'win32' ? 'windows.ico' : process.platform === 'darwin' ? 'macos.png' : 'app.png');
 const args = process.argv.filter((arg) => arg.startsWith('--nimi-dev-renderer-url='));
 if (process.argv.includes('--nimi-dev-renderer-url') || args.length > 1 || (production && args.length)) throw new Error('Invalid supervised renderer URL');
 const developmentUrl = args[0]?.split('=').slice(1).join('=');
@@ -34,7 +36,8 @@ Menu.setApplicationMenu(null);
 registerNimiElectronAppAssetProtocolScheme(protocol);
 
 async function createWindow() {
-  const window = new BrowserWindow({ width: 1360, height: 900, minWidth: 800, minHeight: 600, title: 'Presenton',
+  const window = new BrowserWindow({
+    icon: nativeAppIconPath, width: 1360, height: 900, minWidth: 800, minHeight: 600, title: 'Presenton',
     webPreferences: { preload: path.join(root, 'dist-electron/preload.cjs'), sandbox: true, contextIsolation: true, nodeIntegration: false } });
   window.webContents.setWindowOpenHandler(({ url }) => {
     const target = new URL(url);
@@ -46,6 +49,7 @@ async function createWindow() {
 }
 
 void app.whenReady().then(async () => {
+  if (process.platform === 'darwin' && !app.isPackaged) app.dock?.setIcon(nativeAppIconPath);
 if (production) {
   let serverError = '';
   nextProcess = spawn(process.execPath, [path.join(businessRoot, 'servers/nextjs/.next-production/standalone/servers/nextjs/server.js')], {

@@ -34,7 +34,6 @@ metadata:
   summary: Create, edit and export presentations with Nimi AI and Presenton's
     templates and slide editor.
   icon: electron/build/icon.iconset/icon_512x512.png
-  readme: README.md
   release_notes: NIMI_RELEASE_NOTES.md
   author: Presenton contributors; Nimi adaptation contributors
   homepage_url: https://github.com/nimiplatform/presenton

@@ -145,13 +145,14 @@ try {
   await cp(nativePackageRoot, nativeDestination, { recursive: true, dereference: true, force: false });
   await mkdir(packagerTempRoot, { recursive: true });
 
+  await cp(path.join(appRoot, 'assets', 'native'), path.join(productionSourceRoot, 'assets', 'native'), { recursive: true });
   const packagePaths = await packager({
     dir: productionSourceRoot,
     platform: NATIVE_PLATFORM,
     arch: NATIVE_ARCH,
     appBundleId: "ai.nimi.apps.io.github.nimiplatform.presenton",
     name: APP_EXECUTABLE_NAME,
-    icon: path.join(appRoot, 'electron/build/icon.icns'),
+    icon: path.join(appRoot, 'assets', 'native', MACOS_BUILD ? 'macos.icns' : 'windows.ico'),
     executableName: APP_EXECUTABLE_NAME,
     appVersion: RESOURCE_VERSION,
     buildVersion: RESOURCE_VERSION,

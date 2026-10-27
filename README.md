@@ -1,3 +1,9 @@
+Current development dependencies are SDK 0.22.2, Kit/native 0.22.1, App Tools 0.14.0 and Nimi Coding 0.7.0. The checked-in pnpm lock resolves these packages from the public registry. Run `pnpm install --frozen-lockfile`, `pnpm exec nimi-app check`, then `pnpm dev` with a matching source-built Nimi Runtime and Home. App versions and published App releases are unchanged. Earlier versioned notes retain their original acceptance scope. Home uses the App-owned root `NIMI_APP.md`; this README remains developer documentation.
+
+Upgrade verification: public-registry installation, frozen-lockfile installation, App Tools checks and the applicable type/Host build checks passed. Desktop-supervised macOS development opened the retained presentation library and settings. New model-output journeys and packaged installation were not rerun; earlier evidence below retains its stated versions and scope.
+
+[App introduction and usage](NIMI_APP.md)
+
 ## Windows candidate 0.9.11-beta.8 — 2026-10-13
 
 Unreleased candidate with SDK 0.21.0, Kit/native 0.19.3, App Tools 0.12.2 and Nimi Coding 0.6.5. Type checks, 13 repository tests, 903 Python tests and 65 renderer tests pass. The frozen Windows API initialized a Unicode workspace. Portable resource/executable paths, UTF-8 worker startup, Windows export-path parsing and production tracing are repaired. Download URLs normalize Windows separators while retaining the file-download ownership guard. Development backend state is excluded from the package and rejected if present. Optional debugging source maps are omitted to keep the Windows archive below GitHub's 2 GiB limit.

@@ -33,16 +33,16 @@
   },
   "dependencies": {
     "@llamaindex/liteparse": "^1.5.2",
-    "@nimiplatform/kit": "^0.19.0",
-    "@nimiplatform/sdk": "^0.21.0",
+    "@nimiplatform/kit": "^0.22.1",
+    "@nimiplatform/sdk": "^0.22.2",
     "sharp": "^0.34.5"
   },
-  "packageManager": "pnpm@10.34.5",
+  "packageManager": "pnpm@10.34.7",
   "private": true,
   "devDependencies": {
     "@electron/packager": "^20.3.0",
-    "@nimiplatform/app-tools": "^0.12.2",
-    "@nimiplatform/nimi-coding": "0.6.5",
+    "@nimiplatform/app-tools": "^0.14.0",
+    "@nimiplatform/nimi-coding": "0.7.0",
     "@puppeteer/browsers": "^3.0.3",
     "@types/node": "^24.13.3",
     "electron": "^44.5.1",
