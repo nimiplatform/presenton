@@ -1,3 +1,5 @@
+import { installInPageWorkspaceBridge, type WorkspaceFetchRequest } from './web-workspace';
+
 /** App-owned document channel. A document binds once and can never acquire another scope. */
 let connection: MessagePort | undefined;
 let ended = false;
@@ -24,9 +26,12 @@ export function bindMobileWorkspace(port: MessagePort, initialDrafts: Record<str
   if (connection || ended) throw new Error('This presentation document has already been connected.');
   connection = port;
   drafts = initialDrafts;
+  const bridgeAbort = new AbortController();
   const stop = () => {
     if (ended) return;
     ended = true;
+    bridgeAbort.abort();
+    uninstallBridge();
     for (const request of pending.values()) request.reject(new Error('The PC connection ended; no action was replayed.'));
     pending.clear(); selectedInput = undefined; port.close(); onEnd();
   };
@@ -45,11 +50,17 @@ export function bindMobileWorkspace(port: MessagePort, initialDrafts: Record<str
     const request = pending.get(data.id);
     if (request) { pending.delete(data.id); data.error ? request.reject(new Error(data.error)) : request.resolve(data.result); }
   };
-  const business = (event: MessageEvent) => {
-    if (event.data?.type !== 'presenton-workspace' || !event.ports[0]) return;
-    if (ended) { event.ports[0].postMessage({ error: 'The PC connection ended. Reopen the original task.' }); return; }
-    port.postMessage({ type: 'fetch', request: event.data }, [event.ports[0], ...(event.data.body ? [event.data.body] : [])]);
-  };
+  const uninstallBridge = installInPageWorkspaceBridge({
+    dispose() {},
+    handleRequest(request: WorkspaceFetchRequest, responsePort: MessagePort) {
+      if (ended) {
+        responsePort.postMessage({ error: 'The PC connection ended. Reopen the original task.' });
+        responsePort.close();
+        return;
+      }
+      port.postMessage({ type: 'fetch', request }, [responsePort, ...(request.body ? [request.body] : [])]);
+    },
+  }, bridgeAbort.signal, location.origin);
   const choose = (event: MouseEvent) => {
     const input = event.target;
     if (!(input instanceof HTMLInputElement) || input.type !== 'file') return;
@@ -58,8 +69,7 @@ export function bindMobileWorkspace(port: MessagePort, initialDrafts: Record<str
     const id = crypto.randomUUID(); selectedInput = { id, input };
     port.postMessage({ type: 'pick-files', id, accept: input.accept, multiple: input.multiple });
   };
-  navigator.serviceWorker.addEventListener('message', business);
   document.addEventListener('click', choose, true);
   window.addEventListener('pagehide', stop, { once: true });
-  return () => { stop(); navigator.serviceWorker.removeEventListener('message', business); document.removeEventListener('click', choose, true); };
+  return () => { stop(); document.removeEventListener('click', choose, true); };
 }

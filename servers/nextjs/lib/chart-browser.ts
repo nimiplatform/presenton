@@ -1,6 +1,9 @@
-export const CHART_BROWSER_SCRIPT_URL = "/vendor/chart-4.5.1.umd.min.js";
+const VENDOR_PREFIX = process.env.NEXT_PUBLIC_PRESENTON_VENDOR_PREFIX || "";
+export const CHART_BROWSER_SCRIPT_URL = `${VENDOR_PREFIX}/vendor/chart-4.5.1.umd.min.js`;
 export const CHART_DATALABELS_SCRIPT_URL =
-  "/vendor/chartjs-plugin-datalabels-2.2.0.min.js";
+  `${VENDOR_PREFIX}/vendor/chartjs-plugin-datalabels-2.2.0.min.js`;
+export const CHART_REGISTER_DATALABELS_SCRIPT_URL =
+  `${VENDOR_PREFIX}/vendor/chart-register-datalabels.js`;
 
 export type ChartDatasetLike = {
   backgroundColor?: unknown;

@@ -32,6 +32,8 @@
     "setup:export": "pnpm sync:presentation-export && node electron/scripts/prepare-export-chromium.cjs",
     "dev:web": "nimi-app dev --platform web",
     "dev:web-renderer": "node scripts/nimi-web-renderer.mjs",
+    "build:web": "vite build --config vite.web.config.mjs",
+    "build:web:release": "vite build --config vite.web.config.mjs --mode release",
     "build:android:local": "node scripts/build-android-local.mjs",
     "dev:android": "cap run android",
     "dev:mobile": "nimi-app dev --platform mobile"

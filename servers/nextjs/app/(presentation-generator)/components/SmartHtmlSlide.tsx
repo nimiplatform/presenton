@@ -11,6 +11,7 @@ import {
 import {
   CHART_BROWSER_SCRIPT_URL,
   CHART_DATALABELS_SCRIPT_URL,
+  CHART_REGISTER_DATALABELS_SCRIPT_URL,
 } from "@/lib/chart-browser";
 import { TAILWIND_BROWSER_SCRIPT_URL } from "@/lib/tailwind-browser";
 import { applySmartSlideIconColors } from "@/lib/smart-slide-icons";
@@ -57,11 +58,7 @@ function previewDocument(html: string, fonts: unknown) {
       <script src="${TAILWIND_BROWSER_SCRIPT_URL}"></script>
       <script src="${CHART_BROWSER_SCRIPT_URL}"></script>
       <script src="${CHART_DATALABELS_SCRIPT_URL}"></script>
-      <script>
-        if (window.Chart && window.ChartDataLabels) {
-          window.Chart.register(window.ChartDataLabels);
-        }
-      </script>
+      <script src="${CHART_REGISTER_DATALABELS_SCRIPT_URL}"></script>
       <style>
         html,body{width:1280px;height:720px;min-width:1280px;min-height:720px;margin:0;overflow:hidden;background:#fff}
         *{box-sizing:border-box}

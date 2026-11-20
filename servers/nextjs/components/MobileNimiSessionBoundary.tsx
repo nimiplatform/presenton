@@ -4,7 +4,7 @@ import { usePathname, useSearchParams } from 'next/navigation';
 import { createMobileNimiAppSession } from '@nimiplatform/kit/auth/app/mobile';
 import { NimiAppAccessGate, NimiAppSessionProvider, useNimiAppSession, type NimiAppScope } from '@nimiplatform/kit/auth/app';
 import { NimiThemeProvider, TooltipProvider } from '@nimiplatform/kit/ui';
-import { createWorkspaceTransport, prepareWorkspaceWorker, readWorkspaceExport } from '@/lib/web-workspace';
+import { createWorkspaceTransport, readWorkspaceExport } from '@/lib/web-workspace';
 import { bindMobileWorkspace } from '@/lib/mobile-workspace-client';
 import { MobileIdentityWorkspace } from '@/lib/mobile-identity-workspace';
 import { saveAndroidExport } from '@/lib/android-export';
@@ -58,7 +58,6 @@ function Workspace({ scope, workspace, choose, save }: {
         const current = await createWorkspaceTransport(scope);
         if (signal.aborted) { current.dispose(); return; }
         transport = current; workspace.bind(current.targetRef);
-        await prepareWorkspaceWorker(signal); signal.throwIfAborted();
         setRoute(workspace.route); setReady(true);
       } catch (cause) { if (!signal.aborted) setError(String(cause)); }
     })();

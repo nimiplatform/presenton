@@ -5,7 +5,9 @@ export async function inlineWebSlideAssets(document: string, origin: string, sig
   const candidates = new Set((document.match(assetSlots) ?? []).flatMap(slot =>
     slot.match(/(?:https?:\/\/[^\s"'<>/]+)?\/(?:app_data|static)\/[^\s"'<>)]*/g) ?? []));
   const replacements = await Promise.all([...candidates].map(async raw => {
-    const url = new URL(raw.replaceAll('&amp;', '&'), origin);
+    const parsed = new URL(raw.replaceAll('&amp;', '&'), origin);
+    const isLoopbackAsset = (parsed.hostname === '127.0.0.1' || parsed.hostname === 'localhost') && /^\/(?:app_data|static)\//.test(parsed.pathname);
+    const url = isLoopbackAsset ? new URL(parsed.pathname + parsed.search, origin) : parsed;
     if (url.origin !== origin) throw new Error('This slide refers to a different PC asset origin. Replace that asset in the editor.');
     const response = await fetch(url.href, { signal });
     if (!response.ok) throw new Error('A slide asset could not be read from your PC. Reconnect and reopen the slide.');

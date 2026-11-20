@@ -1,5 +1,3 @@
-import path from "path";
-
 export const getIconFromFile = (file: string): string => {
   const file_ext = file.split(".").pop()?.toLowerCase() ?? "";
   if (file_ext == "pdf") {
@@ -113,5 +111,5 @@ export function sanitizeFilename(input: string | null | undefined, replacement =
 export function getStaticFileUrl(filepath: string): string {
   const pathParts = filepath.split('/');
   const relevantPath = pathParts.slice(2).join('/');
-  return path.join("/static", relevantPath);
+  return `/static/${relevantPath}`.replace(/\/+/g, '/');
 }
