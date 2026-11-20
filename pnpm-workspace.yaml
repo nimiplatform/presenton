@@ -19,7 +19,3 @@ overrides:
   '@tailwindcss/typography>postcss-selector-parser': '6.1.5'
   'minimatch@>=9 <11.0.1': '^11.0.3'
   'glob@>=9 <14.0.2': '^14.0.3'
-  '@nimiplatform/sdk': file:.nimi/local/integration-20261114-android-http-rc.4/nimiplatform-sdk-0.24.0-rc.2.tgz
-  '@nimiplatform/kit': file:.nimi/local/integration-20261114-android-http-rc.4/nimiplatform-kit-0.24.0-rc.4.tgz
-  '@nimiplatform/kit-protected-local-win32-x64': file:.nimi/local/integration-20261114-android-http-rc.4/nimiplatform-kit-protected-local-win32-x64-0.24.0-rc.1.tgz
-  '@nimiplatform/app-tools': file:.nimi/local/integration-20261114-android-http-rc.4/nimiplatform-app-tools-0.16.0-rc.2.tgz

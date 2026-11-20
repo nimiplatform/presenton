@@ -68,8 +68,8 @@
     "tailwindcss-animate": "^1.0.7",
     "uuid": "^11.1.0",
     "zod": "^4.0.5",
-    "@nimiplatform/sdk": "^0.24.0-rc.2",
-    "@nimiplatform/kit": "^0.24.0-rc.1",
+    "@nimiplatform/sdk": "^0.24.0-rc.10",
+    "@nimiplatform/kit": "^0.24.0-rc.16",
     "@radix-ui/react-collapsible": "^1.1.11"
   },
   "devDependencies": {
