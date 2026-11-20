@@ -222,7 +222,12 @@ async def stream_outlines(
                 continue
 
             if isinstance(chunk, HTTPException):
-                yield await fail_outline(chunk.detail, getattr(chunk, "error_type", None), getattr(chunk, "diagnostic_stage", None))
+                error_payload = SSEErrorResponse.from_exception(chunk)
+                yield await fail_outline(
+                    error_payload.detail,
+                    getattr(chunk, "error_type", None) or error_payload.error_type,
+                    getattr(chunk, "diagnostic_stage", None) or error_payload.diagnostic_stage,
+                )
                 return
 
             yield SSEResponse(
@@ -236,7 +241,7 @@ async def stream_outlines(
             presentation_outlines_json = dict(
                 dirtyjson.loads(presentation_outlines_text)
             )
-        except Exception as e:
+        except Exception:
             traceback.print_exc()
             yield await fail_outline("The model returned an unreadable outline. Review the model settings and try again.")
             return

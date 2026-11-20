@@ -2,8 +2,6 @@ import asyncio
 import logging
 from collections.abc import AsyncGenerator, AsyncIterator, Awaitable, Callable
 
-from fastapi import HTTPException
-
 from models.sse_response import SSEErrorResponse
 
 
@@ -20,25 +18,40 @@ async def safe_sse_stream(
             yield chunk
     except asyncio.CancelledError:
         logger.info("SSE stream cancelled by client")
-        return
-    except Exception as exc:
-        logger.exception("SSE stream failed after response started")
         if on_error:
             try:
                 await on_error()
             except Exception:
-                logger.exception("SSE stream error cleanup failed")
-        detail = exc.detail if isinstance(exc, HTTPException) else error_detail
+                logger.error("SSE cancellation cleanup failed")
+        return
+    except Exception as exc:
+        logger.error("SSE stream failed after response started: exception=%s", type(exc).__name__)
+        if on_error:
+            try:
+                await on_error()
+            except Exception:
+                logger.error("SSE stream error cleanup failed")
         metadata: dict[str, object] = {}
-        if isinstance(getattr(exc, "retryable", None), bool):
-            metadata["retryable"] = exc.retryable
-        if getattr(exc, "error_type", None):
-            metadata["error_type"] = exc.error_type
-        if getattr(exc, "diagnostic_stage", None):
-            metadata["diagnostic_stage"] = exc.diagnostic_stage
         if error_metadata:
             try:
                 metadata.update(await error_metadata(exc))
             except Exception:
-                logger.exception("SSE stream error metadata lookup failed")
-        yield SSEErrorResponse(detail=str(detail), **metadata).to_string()
+                logger.error("SSE stream error metadata lookup failed")
+        payload = SSEErrorResponse.from_exception(exc, fallback_detail=error_detail).model_dump(exclude_none=True)
+        merged = {**metadata, **payload}
+        if metadata.get("retryable") is False:
+            merged["retryable"] = False
+        if isinstance(getattr(exc, "retryable", None), bool):
+            merged["retryable"] = exc.retryable
+        if getattr(exc, "error_type", None):
+            merged["error_type"] = exc.error_type
+        if getattr(exc, "diagnostic_stage", None):
+            merged["diagnostic_stage"] = exc.diagnostic_stage
+        yield SSEErrorResponse(**merged).to_string()
+    finally:
+        close = getattr(stream, "aclose", None)
+        if close:
+            try:
+                await close()
+            except Exception:
+                logger.error("SSE stream close failed")

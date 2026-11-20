@@ -1,5 +1,15 @@
 # GitHub Actions workflows
 
+## CodeQL (`codeql.yml`)
+
+CodeQL scans Python, JavaScript/TypeScript, and GitHub Actions with the
+security-extended queries on pushes to `main` and `nimi`, and on pull requests
+targeting `main` or `nimi`. Once present on the default branch, the workflow
+can also be started manually for a selected branch.
+
+Each language uploads its analysis to code scanning and retains a SARIF
+artifact for 14 days. The scan does not build or publish the application.
+
 ## Tests (`test-all.yml`)
 
 Python runs the complete pytest suite on Python 3.11 with the locked uv dependencies.

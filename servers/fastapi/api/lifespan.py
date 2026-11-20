@@ -8,10 +8,7 @@ from migrations import migrate_database_on_startup
 from services.database import async_session_maker, create_db_and_tables, dispose_engines
 from services.async_tasks import fail_interrupted_async_tasks
 from templates.default_templates import import_default_templates_on_startup
-from utils.get_env import (
-    get_app_data_directory_env,
-    get_can_change_keys_env,
-)
+from utils.get_env import get_app_data_directory_env
 
 logger = logging.getLogger(__name__)
 
@@ -47,8 +44,9 @@ async def app_lifespan(_: FastAPI):
     Lifespan context manager for FastAPI application.
     Initializes the application data directory, runs Alembic migrations when
     MIGRATE_DATABASE_ON_STARTUP=true, creates any missing tables, bootstraps
-    the primary administrator from legacy/env credentials (if provided), and checks LLM model
-    availability.
+    the primary administrator from legacy/env credentials (if provided), and loads
+    provider configuration. Provider availability is checked when it is used so account
+    setup and status remain available on an unconfigured instance.
     """
     from services.nimi_business_settings import load_settings
     load_settings()

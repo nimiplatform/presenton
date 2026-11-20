@@ -98,8 +98,9 @@ export class PresentonWebWorkspace {
       if(input.contentType)headers['Content-Type']=input.contentType;if(input.range)headers.Range=input.range;
       const body=t.size?Buffer.concat(t.parts):undefined;t.parts=[];
       // Capture this Host's origin and credential now. Never consult a later session while work is pending.
-      const settings = new URL(route,state.origin).pathname === '/api/user-config' || new URL(route,state.origin).pathname === '/api/v1/ppt/business-settings';
-      if(settings && input.method!=='GET') {
+      const pathname = new URL(route,state.origin).pathname;
+      const settings = pathname === '/api/user-config' || pathname === '/api/v1/ppt/business-settings';
+      if((settings && input.method!=='GET') || pathname === '/api/v1/ppt/images/test') {
         transfer.response=Response.json({detail:'Configure business services and credentials in Presenton on your PC.'},{status:403});transfer.reader=transfer.response.body!.getReader();return {started:true};
       }
       void requestWorkspaceHttp(new URL(route,state.origin),{method:input.method,headers,body,signal:t.controller.signal})

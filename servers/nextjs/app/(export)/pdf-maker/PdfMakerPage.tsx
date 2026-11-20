@@ -12,7 +12,7 @@ import { AlertCircle } from "lucide-react";
 import { setPresentationData } from "@/store/slices/presentationGeneration";
 import { DashboardApi } from "@/app/(presentation-generator)/services/api/dashboard";
 import { useFontLoader } from "@/app/(presentation-generator)/hooks/useFontLoad";
-import { Theme } from "@/app/(presentation-generator)/services/api/types";
+import { applyPresentationThemeToElement } from "@/app/(presentation-generator)/presentation/utils/applyPresentationThemeDom";
 import SlideScale from "@/app/(presentation-generator)/components/PresentationRender";
 import {
   shouldRenderTemplateV2HtmlPreview,
@@ -174,7 +174,10 @@ const PresentationPage = ({ presentation_id }: PresentationPageProps) => {
       }
       if (normalizedData?.theme) {
         try {
-          applyTheme(normalizedData.theme);
+          applyPresentationThemeToElement(
+            document.getElementById("presentation-slides-wrapper"),
+            normalizedData.theme,
+          );
         } catch (themeError) {
           // Theme issues should not block export rendering.
           console.warn("Theme application skipped for pdf-maker:", themeError);
@@ -187,43 +190,6 @@ const PresentationPage = ({ presentation_id }: PresentationPageProps) => {
     } finally {
       setContentLoading(false);
     }
-  };
-
-  const applyTheme = (theme: Theme) => {
-    const element = document.getElementById("presentation-slides-wrapper");
-    if (!element) return;
-    if (!theme?.data) return;
-    if (!theme.data.colors["graph_0"]) return;
-    if (!theme.data.fonts?.textFont?.name || !theme.data.fonts?.textFont?.url) return;
-
-    const cssVariables = {
-      "--primary-color": theme.data.colors["primary"],
-      "--background-color": theme.data.colors["background"],
-      "--card-color": theme.data.colors["card"],
-      "--stroke": theme.data.colors["stroke"],
-      "--primary-text": theme.data.colors["primary_text"],
-      "--background-text": theme.data.colors["background_text"],
-      "--graph-0": theme.data.colors["graph_0"],
-      "--graph-1": theme.data.colors["graph_1"],
-      "--graph-2": theme.data.colors["graph_2"],
-      "--graph-3": theme.data.colors["graph_3"],
-      "--graph-4": theme.data.colors["graph_4"],
-      "--graph-5": theme.data.colors["graph_5"],
-      "--graph-6": theme.data.colors["graph_6"],
-      "--graph-7": theme.data.colors["graph_7"],
-      "--graph-8": theme.data.colors["graph_8"],
-      "--graph-9": theme.data.colors["graph_9"],
-    };
-
-    Object.entries(cssVariables).forEach(([key, value]) => {
-      element.style.setProperty(key, value);
-    });
-    const textFontName = theme.data.fonts.textFont.name;
-    const textFontUrl = theme.data.fonts.textFont.url;
-    useFontLoader({ [textFontName]: textFontUrl });
-    element.style.setProperty("font-family", `"${textFontName}"`);
-    element.style.setProperty("--heading-font-family", `"${textFontName}"`);
-    element.style.setProperty("--body-font-family", `"${textFontName}"`);
   };
 
   const slides = presentationData?.slides ?? [];

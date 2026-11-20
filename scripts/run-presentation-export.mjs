@@ -1,6 +1,10 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import { runTask } from "@presenton/export-core";
+import { finalizeExportPermissions } from "./export-permissions.cjs";
+
+// Keep generated artifacts private until the owning service/proxy can read them.
+process.umask(0o027);
 
 function parseCookieHeader(cookieHeader) {
   if (!cookieHeader) return undefined;
@@ -37,6 +41,9 @@ function buildRunOptions(task, legacyTask) {
   const puppeteerCacheDirectory = process.env.PUPPETEER_CACHE_DIR?.trim();
   const fastapiUrl = legacyTask.fastapiUrl || process.env.NEXT_PUBLIC_FAST_API?.trim();
   const cookies = parseCookieHeader(legacyTask.cookieHeader);
+  // Browser cookies cannot be scoped to a port. The desktop capability is
+  // supplied below as an exact-origin header instead, including asset fetches.
+  if (cookies) delete cookies.presenton_desktop_session;
 
   const outputDirectory = appDataDirectory
     ? task.type === "export" || task.type === "html-to-any"
@@ -45,9 +52,21 @@ function buildRunOptions(task, legacyTask) {
     : undefined;
 
   const urlConfigs =
-    cookies && typeof task.url === "string"
+    cookies && Object.keys(cookies).length && typeof task.url === "string"
       ? [{ url: task.url, match: "origin", cookies }]
-      : undefined;
+      : [];
+  // Export Chromium and Node asset downloads are outside Electron's session.
+  // Never attach the desktop capability to arbitrary task/asset URLs.
+  const desktopToken = process.env.PRESENTON_DESKTOP_TOKEN;
+  if (process.env.PRESENTON_ELECTRON === "true" && desktopToken) {
+    for (const url of (process.env.PRESENTON_DESKTOP_ORIGINS || "").split(",")) {
+      if (url) urlConfigs.push({
+        url,
+        match: "origin",
+        headers: { "x-presenton-desktop-token": desktopToken },
+      });
+    }
+  }
 
   return {
     ...(outputDirectory ? { outputDirectory } : {}),
@@ -59,7 +78,7 @@ function buildRunOptions(task, legacyTask) {
       args: ["--no-sandbox", "--disable-gpu", "--disable-dev-shm-usage", "--no-zygote", "--no-extensions", "--disable-frame-rate-limit"],
     } } : {}),
     ...(puppeteerCacheDirectory ? { puppeteerCacheDirectory } : {}),
-    ...(urlConfigs ? { urlConfigs } : {}),
+    ...(urlConfigs.length ? { urlConfigs } : {}),
     ...(fastapiUrl || process.env.ASSETS_BASE_URL?.trim()
       ? { modifyWindow: buildModifyWindow(fastapiUrl) }
       : {}),
@@ -104,6 +123,14 @@ async function main() {
   // a browser-close error. Closing the pipe also ends this owned browser.
   process.once("SIGTERM", () => process.exit(143));
   const response = await runTask(task, options);
+  if (typeof response !== "string") {
+    const files = response.type === "files" ? response.filePaths : [response.filePath];
+    for (const filename of files) {
+      finalizeExportPermissions(filename, [process.env.APP_DATA_DIRECTORY, process.env.TEMP_DIRECTORY], {
+        recursive: task.type === "pptx-to-html" || task.type === "pptx-to-json",
+      });
+    }
+  }
   const responsePath = taskPath.replace(/\.json$/i, ".response.json");
   await fs.writeFile(responsePath, JSON.stringify(normalizeResponse(response)), "utf8");
 }

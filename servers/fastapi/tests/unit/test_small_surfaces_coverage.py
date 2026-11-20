@@ -27,8 +27,7 @@ from models.sse_response import (
 from services.chat.conversation_store import ChatConversationStore
 from services.concurrent_service import ConcurrentService
 from services.export_task_service import EXPORT_TASK_SERVICE
-from templates import get_layout_by_name as tpl_layout_fetcher
-from templates.presentation_layout import PresentationLayoutModel, SlideLayoutModel
+from models.presentation_layout import PresentationLayoutModel, SlideLayoutModel
 from utils import ocr_language
 from utils.datetime_utils import get_current_utc_datetime
 from utils.export_utils import export_presentation
@@ -46,9 +45,10 @@ from utils.get_dynamic_models import (
 from utils.image_provider import (
     get_selected_image_provider,
     is_comfyui_selected,
-    is_dalle3_selected,
+    is_gpt_image_2_selected,
     is_gemini_flash_selected,
-    is_gpt_image_1_5_selected,
+    is_gpt_image_2_5_flare_selected,
+    is_gpt_image_2_5_sunburst_selected,
     is_image_generation_disabled,
     is_nanobanana_pro_selected,
     is_open_webui_selected,
@@ -65,8 +65,9 @@ _ALL_IMAGE_PROVIDER_PREDICATES = (
     is_pixabay_selected,
     is_gemini_flash_selected,
     is_nanobanana_pro_selected,
-    is_dalle3_selected,
-    is_gpt_image_1_5_selected,
+    is_gpt_image_2_selected,
+    is_gpt_image_2_5_flare_selected,
+    is_gpt_image_2_5_sunburst_selected,
     is_comfyui_selected,
     is_open_webui_selected,
 )
@@ -206,7 +207,7 @@ def test_safe_sse_stream_converts_late_exception_to_error_frame():
     assert len(chunks) == 2
     event, data = _parse_sse_frame(chunks[-1])
     assert event == "response"
-    assert data == {"type": "error", "detail": "Stream failed"}
+    assert data == {"type": "error", "detail": "Stream failed", "code": "internal_error", "status_code": 500, "retryable": True, "source": "generation"}
 
 
 def test_safe_sse_stream_includes_structured_progress_metadata():
@@ -239,6 +240,7 @@ def test_safe_sse_stream_includes_structured_progress_metadata():
     assert data == {
         "type": "error",
         "detail": "Generation was incomplete",
+        "code": "validation_error",
         "source": "generation",
         "status_code": 422,
         "retryable": False,
@@ -366,8 +368,9 @@ def test_get_writable_path_app_data_fallback(monkeypatch, tmp_path):
         ("pixabay", is_pixabay_selected),
         ("gemini_flash", is_gemini_flash_selected),
         ("nanobanana_pro", is_nanobanana_pro_selected),
-        ("dall-e-3", is_dalle3_selected),
-        ("gpt-image-1.5", is_gpt_image_1_5_selected),
+        ("gpt-image-2", is_gpt_image_2_selected),
+        ("gpt-image-2.5-flare", is_gpt_image_2_5_flare_selected),
+        ("gpt-image-2.5-sunburst", is_gpt_image_2_5_sunburst_selected),
         ("comfyui", is_comfyui_selected),
         ("open_webui", is_open_webui_selected),
     ],
@@ -427,11 +430,6 @@ def test_presentation_language_invalid_code_fallback(monkeypatch):
 
 
 def test_handle_llm_client_exceptions(monkeypatch):
-    monkeypatch.setattr(
-        handle_llm_client_exceptions.__globals__["traceback"],
-        "print_exc",
-        lambda: None,
-    )
     assert (
         handle_llm_client_exceptions(HTTPException(status_code=401, detail="auth")).detail
         == "auth"
@@ -442,7 +440,7 @@ def test_handle_llm_client_exceptions(monkeypatch):
     from utils.provider_error_messages import INVALID_API_KEY_MESSAGE
 
     llmai_err = LLMAIBaseError(status_code=429, message="busy")
-    assert handle_llm_client_exceptions(llmai_err).detail == "busy"
+    assert "rate limited" in handle_llm_client_exceptions(llmai_err).detail
 
     wrapped_auth_err = LLMAIBaseError(
         status_code=401,
@@ -456,7 +454,7 @@ def test_handle_llm_client_exceptions(monkeypatch):
     assert wrapped_auth_response.detail == INVALID_API_KEY_MESSAGE
     assert "sk-proj" not in wrapped_auth_response.detail
 
-    assert "OpenAI API request failed" in handle_llm_client_exceptions(
+    assert "AI provider" in handle_llm_client_exceptions(
         OpenAIAPIError(
             message="boom",
             request=httpx.Request("POST", "https://x"),
@@ -464,7 +462,7 @@ def test_handle_llm_client_exceptions(monkeypatch):
         )
     ).detail
 
-    assert "Google API error" in handle_llm_client_exceptions(
+    assert "temporarily unavailable" in handle_llm_client_exceptions(
         GoogleAPIError(503, {})
     ).detail
 
@@ -483,7 +481,8 @@ def test_handle_llm_client_exceptions(monkeypatch):
     assert codex_auth.headers == {"X-Presenton-Auth-Action": "codex-reauth"}
 
     generic = handle_llm_client_exceptions(ValueError("oops"))
-    assert generic.detail.startswith("LLM API error")
+    assert generic.error_code == "provider_error"
+    assert "oops" not in generic.detail
 
 
 def test_concurrent_service_runs_tasks(monkeypatch):
@@ -547,7 +546,8 @@ def test_export_passes_business_cookie_without_putting_it_in_url(monkeypatch):
     asyncio.run(runner())
 
 
-def test_export_task_output_permissions_are_readable(tmp_path):
+def test_export_task_output_permissions_are_readable(tmp_path, monkeypatch):
+    monkeypatch.setenv("APP_DATA_DIRECTORY", str(tmp_path))
     export_dir = tmp_path / "exports"
     export_dir.mkdir(mode=0o700)
     output_path = export_dir / "deck.pptx"
@@ -559,8 +559,8 @@ def test_export_task_output_permissions_are_readable(tmp_path):
 
     assert output_path.read_bytes() == b"pptx"
     if os.name != "nt":
-        assert stat.S_IMODE(export_dir.stat().st_mode) == 0o755
-        assert stat.S_IMODE(output_path.stat().st_mode) == 0o644
+        assert stat.S_IMODE(export_dir.stat().st_mode) == 0o750
+        assert stat.S_IMODE(output_path.stat().st_mode) == 0o640
 
 
 def test_replace_and_extension_helpers():
@@ -617,99 +617,6 @@ def test_presentation_layout_model_surface():
     assert layout.get_slide_layout_index("sid") == 0
     with pytest.raises(HTTPException):
         layout.get_slide_layout_index("missing")
-
-
-def _make_aio_layout_session(resp: AsyncMock):
-    sess = MagicMock()
-    getter = MagicMock()
-    getter.__aenter__ = AsyncMock(return_value=resp)
-    getter.__aexit__ = AsyncMock(return_value=None)
-    sess.get = MagicMock(return_value=getter)
-    sess.__aenter__ = AsyncMock(return_value=sess)
-    sess.__aexit__ = AsyncMock(return_value=None)
-    return sess
-
-
-def test_get_layout_by_name_returns_model(monkeypatch):
-    monkeypatch.setenv("PRESENTON_HOST_KEY", "a" * 64)
-    resp = AsyncMock()
-    resp.status = 200
-    resp.json = AsyncMock(
-        return_value={
-            "name": "grp",
-            "ordered": False,
-            "slides": [{"id": "layout", "json_schema": {"title": "t"}}],
-        }
-    )
-
-    async def runner():
-        with patch(
-            "templates.get_layout_by_name.aiohttp.ClientSession",
-            return_value=_make_aio_layout_session(resp),
-        ):
-            layout = await tpl_layout_fetcher.get_layout_by_name("deck")
-            assert isinstance(layout, PresentationLayoutModel)
-
-    asyncio.run(runner())
-
-
-def test_get_layout_by_name_raises_on_http_failure(monkeypatch):
-    monkeypatch.setenv("PRESENTON_HOST_KEY", "a" * 64)
-    resp = AsyncMock()
-    resp.status = 500
-    resp.text = AsyncMock(return_value="down")
-
-    async def runner():
-        with patch(
-            "templates.get_layout_by_name.aiohttp.ClientSession",
-            return_value=_make_aio_layout_session(resp),
-        ):
-            with pytest.raises(HTTPException):
-                await tpl_layout_fetcher.get_layout_by_name("missing")
-
-    asyncio.run(runner())
-
-
-def test_get_layout_by_name_uses_host_header_without_obsolete_auth_cookie(monkeypatch):
-    monkeypatch.setenv("PRESENTON_HOST_KEY", "a" * 64)
-    resp = AsyncMock()
-    resp.status = 200
-    resp.json = AsyncMock(
-        return_value={
-            "name": "grp",
-            "ordered": False,
-            "slides": [{"id": "layout", "json_schema": {"title": "t"}}],
-        }
-    )
-
-    captured: dict[str, str | None] = {}
-
-    def capture_session(*_a, **_k):
-        sess = MagicMock()
-
-        def _get(url, *, headers=None, **_kw):
-            captured.update(headers or {})
-            inner = MagicMock()
-            inner.__aenter__ = AsyncMock(return_value=resp)
-            inner.__aexit__ = AsyncMock(return_value=None)
-            return inner
-
-        sess.get = MagicMock(side_effect=_get)
-        sess.__aenter__ = AsyncMock(return_value=sess)
-        sess.__aexit__ = AsyncMock(return_value=None)
-        return sess
-
-    async def runner():
-        with patch(
-            "templates.get_layout_by_name.aiohttp.ClientSession",
-            side_effect=capture_session,
-        ):
-            layout = await tpl_layout_fetcher.get_layout_by_name("deck")
-            assert isinstance(layout, PresentationLayoutModel)
-
-    asyncio.run(runner())
-    assert "Cookie" not in captured
-    assert captured["X-Presenton-Host"] == "a" * 64
 
 
 @pytest.mark.parametrize(

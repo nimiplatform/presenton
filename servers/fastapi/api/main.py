@@ -21,6 +21,8 @@ from utils.get_env import (
 )
 from utils.mime_types import init_sandbox_safe_mimetypes
 from utils.path_helpers import get_resource_path
+from api.v1.auth.assets import mount_app_data_assets
+from utils.api_errors import register_error_handlers
 
 
 init_sandbox_safe_mimetypes()
@@ -73,7 +75,9 @@ app.include_router(API_V2_ROUTER)
 app_data_dir = get_app_data_directory_env()
 if app_data_dir:
     os.makedirs(app_data_dir, exist_ok=True)
-    app.mount("/app_data", StaticFiles(directory=app_data_dir), name="app_data")
+    # Configuration, databases, logs and Chromium state are private even when
+    # account login is disabled. Only browser assets have HTTP mounts.
+    mount_app_data_assets(app, app_data_dir)
 
 static_dir = get_resource_path("static")
 if os.path.isdir(static_dir):
@@ -110,3 +114,6 @@ async def static_icon_fallback_middleware(request: Request, call_next):
     return FileResponse(placeholder, media_type="image/svg+xml")
 
 app.add_middleware(HostOnlyMiddleware)
+
+# Register last so the boundary also covers authentication/config middleware.
+register_error_handlers(app)

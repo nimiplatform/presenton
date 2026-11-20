@@ -1,6 +1,9 @@
 import io
+import uuid
+from pathlib import Path
 from unittest.mock import AsyncMock, Mock, patch
 
+import pytest
 from fastapi import FastAPI, HTTPException
 from fastapi.testclient import TestClient
 from PIL import Image
@@ -111,6 +114,29 @@ def test_generate_image_returns_image_path_and_persists_image_asset(fake_async_s
     assert fake_async_session.commit_count == 1
 
 
+def test_generate_image_passes_optional_target_dimensions(fake_async_session):
+    client = _build_client(fake_async_session)
+    with patch(
+        "api.v1.ppt.endpoints.images.get_images_directory", return_value="/tmp"
+    ), patch("api.v1.ppt.endpoints.images.ImageGenerationService") as mock_service_cls:
+        service = Mock()
+        service.generate_image = AsyncMock(return_value="https://example.com/image.png")
+        mock_service_cls.return_value = service
+
+        response = client.get("/images/generate?prompt=landscape&width=400&height=200")
+
+    assert response.status_code == 200
+    request = service.generate_image.await_args.args[0]
+    assert request.target_size == (400, 200)
+
+
+def test_generate_image_rejects_incomplete_target_dimensions(fake_async_session):
+    response = _build_client(fake_async_session).get(
+        "/images/generate?prompt=landscape&width=400"
+    )
+    assert response.status_code == 422
+
+
 def test_generate_image_returns_placeholder_without_db_write(fake_async_session):
     client = _build_client(fake_async_session)
 
@@ -213,6 +239,32 @@ def test_upload_image_rejects_non_image_bytes(tmp_path, fake_async_session):
     assert fake_async_session.added == []
     assert fake_async_session.commit_count == 0
     assert list(tmp_path.iterdir()) == []
+
+
+@pytest.mark.parametrize("filename", ["slide.png", "../../private.png", r"..\..\private.png", "folder/slide.png"])
+def test_upload_storage_name_is_server_owned(tmp_path, fake_async_session, filename):
+    client = _build_client(fake_async_session)
+    with patch("api.v1.ppt.endpoints.images.get_images_directory", return_value=str(tmp_path)):
+        response = client.post("/images/upload", files={"file": (filename, _png_bytes(), "image/png")})
+    assert response.status_code == 200
+    stored = Path(response.json()["path"])
+    assert stored.parent == tmp_path
+    assert str(uuid.UUID(stored.stem)) == stored.stem
+    assert stored.read_bytes() == _png_bytes()
+
+
+def test_upload_never_overwrites_an_existing_destination(tmp_path, fake_async_session):
+    identifier = uuid.UUID("00000000-0000-4000-8000-000000000001")
+    destination = tmp_path / f"{identifier}.png"
+    destination.write_bytes(b"existing control")
+    client = _build_client(fake_async_session)
+    with patch("api.v1.ppt.endpoints.images.get_images_directory", return_value=str(tmp_path)), patch(
+        "api.v1.ppt.endpoints.images.uuid.uuid4", return_value=identifier
+    ):
+        response = client.post("/images/upload", files={"file": ("slide.png", _png_bytes(), "image/png")})
+    assert response.status_code == 500
+    assert destination.read_bytes() == b"existing control"
+    assert fake_async_session.added == []
 
 
 def test_upload_image_rejects_unsupported_extension(tmp_path, fake_async_session):

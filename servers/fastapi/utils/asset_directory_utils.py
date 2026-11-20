@@ -1,4 +1,5 @@
 import os
+import sys
 from pathlib import Path
 from typing import Optional
 from urllib.parse import urlparse, unquote
@@ -11,6 +12,7 @@ from utils.get_env import (
 )
 from utils.path_helpers import get_resource_path
 from api.v1.auth.assets import (
+    PRIVATE_APP_DATA_ROOTS,
     SHARED_APP_DATA_ROOTS,
     is_app_data_path_authorized,
     normalized_app_data_parts,
@@ -127,8 +129,13 @@ def resolve_app_path_to_filesystem(path_or_url: str) -> Optional[str]:
         app_data = get_app_data_directory_env()
         if not app_data or not _app_data_url_allowed(path):
             return None
-        relative = path[len("/app_data/"):]
-        return _existing_file_within(os.path.join(app_data, relative), app_data)
+        parts = normalized_app_data_parts(path)
+        if not parts:
+            return None
+        # Match StaticFiles' per-asset-root containment: an image symlink must
+        # not turn into a read of private configuration elsewhere in app_data.
+        root = os.path.join(app_data, parts[0])
+        return _existing_file_within(os.path.join(app_data, *parts), root)
 
     if path.startswith("/static/"):
         relative = path[len("/static/"):]
@@ -137,9 +144,14 @@ def resolve_app_path_to_filesystem(path_or_url: str) -> Optional[str]:
 
     if path.startswith("/vendor/fonts/"):
         relative = path.lstrip("/")
-        nextjs_public_root = (
-            Path(__file__).resolve().parents[2] / "nextjs" / "public"
+        # PyInstaller puts __file__ under fastapi/_internal, while Electron
+        # bundles Next.js beside the fastapi executable's directory.
+        servers_root = (
+            Path(sys.executable).resolve().parent.parent
+            if getattr(sys, "frozen", False)
+            else Path(__file__).resolve().parents[2]
         )
+        nextjs_public_root = servers_root / "nextjs" / "public"
         return _existing_file_within(
             os.path.join(nextjs_public_root, relative),
             str(nextjs_public_root),
@@ -158,7 +170,10 @@ def _existing_file_within(candidate: str, root: str) -> Optional[str]:
     try:
         resolved_candidate = os.path.realpath(candidate)
         resolved_root = os.path.realpath(root)
-        if os.path.commonpath([resolved_candidate, resolved_root]) != resolved_root:
+        # Compare canonical paths with a directory separator: sibling names
+        # such as images-other must never satisfy the images boundary.
+        prefix = resolved_root.rstrip(os.sep) + os.sep
+        if not resolved_candidate.startswith(prefix):
             return None
     except (OSError, ValueError):
         return None
@@ -172,7 +187,7 @@ def _app_data_url_allowed(path: str) -> bool:
         return bool(
             parts
             and (
-                is_disable_auth_enabled()
+                (is_disable_auth_enabled() and parts[0] in PRIVATE_APP_DATA_ROOTS)
                 or parts[0] in SHARED_APP_DATA_ROOTS
             )
         )
@@ -218,3 +233,7 @@ def get_exports_directory():
 
 def get_uploads_directory():
     return _owned_directory("uploads")
+
+
+def get_pptx_to_json_directory():
+    return _owned_directory("pptx-to-json")

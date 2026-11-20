@@ -1,5 +1,6 @@
 import asyncio
 import base64
+import logging
 import uuid
 from copy import deepcopy
 from datetime import datetime, timezone
@@ -41,7 +42,60 @@ from models.sql.async_task import AsyncTaskModel
 from models.sql.template_v2 import TemplateV2
 from models.theme_data import PresentationThemeData
 from services.export_task_service import PptxToJsonDocument
-from templates.v2.models.layouts import MergedComponents, RawSlideLayouts, SlideLayouts
+from templates.v2.models.layouts import LayoutGenerationOptions, MergedComponents, RawSlideLayouts, SlideLayouts
+
+
+def test_template_source_logs_escape_untrusted_urls(monkeypatch, caplog):
+    from api.v1.ppt.endpoints import template
+
+    value = "/app_data/uploads/missing\nFORGED\r\x1b[2J.pptx"
+    monkeypatch.setattr(template, "resolve_app_path_to_filesystem", lambda _url: None)
+    with caplog.at_level(logging.INFO, logger=template.LOGGER.name):
+        with pytest.raises(HTTPException) as error:
+            asyncio.run(template._prepare_template_source(
+                InitTemplateRequest(pptx_url=value, slide_image_urls=["/app_data/images/control.png"]), operation="init"
+            ))
+    assert error.value.status_code == 400
+    messages = [record.getMessage() for record in caplog.records]
+    assert len(messages) == 2
+    assert all("\n" not in message and "\r" not in message and "\x1b" not in message for message in messages)
+    assert all(repr(value) in message for message in messages)
+
+
+def test_template_source_logs_escape_owned_paths_without_changing_converter_input(monkeypatch, caplog):
+    from api.v1.ppt.endpoints import template
+
+    value = "/owned/uploads/deck\nFORGED\r\x1b[2J.pptx"
+    monkeypatch.setattr(template, "resolve_app_path_to_filesystem", lambda _url: value)
+    monkeypatch.setattr(template.os.path, "isfile", lambda _path: True)
+    convert = AsyncMock(side_effect=RuntimeError("conversion control"))
+    monkeypatch.setattr(template.EXPORT_TASK_SERVICE, "convert_pptx_to_json", convert)
+    with caplog.at_level(logging.INFO, logger=template.LOGGER.name):
+        with pytest.raises(RuntimeError, match="conversion control"):
+            asyncio.run(template._prepare_template_source(
+                InitTemplateRequest(pptx_url="/app_data/uploads/deck.pptx", slide_image_urls=["/app_data/images/control.png"]), operation="init"
+            ))
+    convert.assert_awaited_once_with(value)
+    message = caplog.records[-1].getMessage()
+    assert repr(value) in message
+    assert "\n" not in message and "\r" not in message and "\x1b" not in message
+
+
+@pytest.mark.parametrize("name", [None, "custom\nFORGED\r\x1b[2J"])
+def test_template_persistence_logs_escape_names_and_preserve_saved_values(tmp_path, fake_async_session, monkeypatch, caplog, name):
+    from api.v1.ppt.endpoints import template
+
+    filename = "deck\nFORGED\r\x1b[2J.pptx"
+    source = template.os.path.join(str(tmp_path), filename)
+    monkeypatch.setattr(template, "resolve_app_path_to_filesystem", lambda _url: source)
+    monkeypatch.setattr(template.os.path, "isfile", lambda _path: True)
+    monkeypatch.setattr(template.EXPORT_TASK_SERVICE, "convert_pptx_to_json", AsyncMock(return_value=PptxToJsonDocument(**RAW_LAYOUTS)))
+    with caplog.at_level(logging.INFO, logger=template.LOGGER.name):
+        asyncio.run(template.init_template(InitTemplateRequest(
+            pptx_url="/app_data/uploads/source.pptx", slide_image_urls=["/app_data/images/control.png"], name=name
+        ), sql_session=fake_async_session))
+    assert fake_async_session.added[0].name == (name or filename[:-5])
+    assert all("\n" not in record.getMessage() and "\r" not in record.getMessage() and "\x1b" not in record.getMessage() for record in caplog.records)
 
 
 RAW_LAYOUTS = {
@@ -381,7 +435,8 @@ def test_create_template_converts_generates_and_persists(tmp_path, fake_async_se
 
     convert_mock.assert_awaited_once_with(str(pptx_path))
     generate_mock.assert_called_once()
-    raw_layouts_arg, slide_images_arg, fonts_arg = generate_mock.call_args.args
+    raw_layouts_arg, slide_images_arg, fonts_arg, options_arg = generate_mock.call_args.args
+    assert options_arg == LayoutGenerationOptions()
     assert len(raw_layouts_arg.layouts) == 1
     assert slide_images_arg == ["/app_data/images/slide-1.png"]
     assert fonts_arg == {"Inter": "Inter"}
@@ -792,10 +847,13 @@ def test_create_template_async_task_updates_slide_status_before_batch_completes(
     session = _TemplateTaskSession(task)
     generated_layouts = _two_template_layouts()["layouts"]
     generation_max_tokens = []
+    options = LayoutGenerationOptions(text_growth=False, visual_replacement=False)
+    task.payload["generation_options"] = options.model_dump()
 
     def fake_generate_slide_layout(
-        _raw_layout, index, _slide_image_url, _fonts, *, max_tokens=None
+        _raw_layout, index, _slide_image_url, _fonts, *, max_tokens=None, generation_options=None
     ):
+        assert generation_options == options
         generation_max_tokens.append(max_tokens)
         return generated_layouts[index]
 
@@ -1155,7 +1213,9 @@ def test_create_template_slide_layouts_returns_generated_layout(
     assert slide_index == 0
     assert slide_image_url == "/app_data/images/slide-1.png"
     assert fonts == {"Inter": "https://example.com/inter.css"}
-    assert generate_mock.call_args.kwargs == {}
+    assert generate_mock.call_args.kwargs == {
+        "generation_options": LayoutGenerationOptions(),
+    }
     assert response.layouts[0].index == 0
     response_layout = response.layouts[0].layout.model_dump(
         mode="json", exclude_none=True
@@ -1259,7 +1319,9 @@ def test_create_template_slide_layouts_preserves_image_url_indexes(
     assert source_layout.id == "slide_2"
     assert slide_index == 1
     assert slide_image_url == "/app_data/images/slide-2.png"
-    assert generate_mock.call_args.kwargs == {}
+    assert generate_mock.call_args.kwargs == {
+        "generation_options": LayoutGenerationOptions(),
+    }
 
 
 def test_create_template_slide_layouts_returns_404_for_missing_template(

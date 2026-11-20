@@ -48,3 +48,4 @@ resources/presenton-worker/
 .next-web/
 !/android/app/src/debug/
 !/android/app/src/debug/**
+.impeccable

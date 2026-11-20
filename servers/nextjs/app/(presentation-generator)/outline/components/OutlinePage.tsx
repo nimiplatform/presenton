@@ -306,8 +306,11 @@ const OutlinePage: React.FC = () => {
 
       dispatch(setPptGenUploadState({ config: draftConfig, files }));
       dispatch(clearOutlines());
-      dispatch(setPresentationId(createResponse.id));
-      router.replace(`/outline?id=${encodeURIComponent(createResponse.id)}`);
+      // The URL owns the active ID; its sync effect updates Redux. Updating
+      // Redux alone lets the previous URL restore the old ID and stalls SSE.
+      const nextParams = new URLSearchParams(searchParams.toString());
+      nextParams.set("id", createResponse.id);
+      router.replace(`/outline?${nextParams.toString()}`, { scroll: false });
       trackEvent(MixpanelEvent.TemplateV2_Outline_Regeneration_Completed, {
         old_presentation_id: presentation_id,
         new_presentation_id: createResponse.id,
@@ -343,6 +346,7 @@ const OutlinePage: React.FC = () => {
     outlineControlsBusy,
     presentation_id,
     router,
+    searchParams,
     selectedTemplateId,
     streamState.error,
   ]);
@@ -437,16 +441,18 @@ const OutlinePage: React.FC = () => {
         <>
           <div className="lg:mr-[369px]">
             <main className="mx-auto w-[calc(100%-2.5rem)] max-w-[967px] pb-28 pt-10 sm:w-[calc(100%-5rem)]">
-              <OutlinePromptBar
-                config={draftConfig}
-                disabled={outlineControlsBusy}
-                isBusy={outlineControlsBusy}
-                regenerateDisabled={isRegenerateDisabled}
-                onConfigChange={handleConfigChange}
-                onRegenerate={handleRegenerateOutline}
-              />
+              <div className="motion-enter">
+                <OutlinePromptBar
+                  config={draftConfig}
+                  disabled={outlineControlsBusy}
+                  isBusy={outlineControlsBusy}
+                  regenerateDisabled={isRegenerateDisabled}
+                  onConfigChange={handleConfigChange}
+                  onRegenerate={handleRegenerateOutline}
+                />
+              </div>
 
-              <div className="mt-12">
+              <div className="motion-fade motion-delay-1 mt-12">
                 {outlineError && (
                   <div role="alert" className="mb-6 rounded-xl border border-red-200 bg-red-50 p-5 text-sm text-red-950">
                     <h2 className="mb-2 font-semibold">Outline generation stopped</h2>

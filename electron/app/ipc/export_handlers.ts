@@ -5,12 +5,12 @@ import {
   getDownloadsDir,
   getTempDir,
   resourceBaseDir,
+  isDev,
 } from "../utils/constants";
 import fs from "fs";
 import path from "path";
 
 import { showFileDownloadedDialog } from "../utils/dialog";
-import { v4 as uuidv4 } from 'uuid';
 import { ChildProcess, spawn } from "child_process";
 import { safeError, safeLog } from "../utils/safe-console";
 import { addMainBreadcrumb } from "../sentry/main";
@@ -23,6 +23,7 @@ import {
   resolveLaunchableExportChromiumPath,
 } from "../utils/export-chromium";
 import { resolveExportSpawnTarget } from "../utils/export-msix-runtime";
+import { desktopCookieHeader } from "../utils/desktop-auth";
 
 type RuntimeCandidate = {
   command: string;
@@ -61,7 +62,9 @@ export function setupExportHandlers() {
         return {
           success: false,
           message:
-            "Export requires Chromium. Restart Presenton and complete the Chromium setup step when prompted.",
+            isDev
+              ? "The export runtime is missing. Run npm run setup:desktop-runtime in the electron directory, then restart the desktop development app."
+              : "The export browser is missing from this installation. Reinstall Presenton to restore export support.",
         };
       }
 
@@ -83,16 +86,15 @@ export function setupExportHandlers() {
         format: exportAs,
         title: title,
         fastapiUrl: process.env.NEXT_PUBLIC_FAST_API,
+        cookieHeader: desktopCookieHeader(),
       };
 
-      const randomUuid = uuidv4();
       const tempDir = getTempDir();
       const appDataDir = getAppDataDir();
-      exportTempDir = path.join(tempDir, randomUuid);
-      await fs.promises.mkdir(exportTempDir, { recursive: true });
+      exportTempDir = await fs.promises.mkdtemp(path.join(tempDir, "export-"));
 
       const exportTaskPath = path.join(exportTempDir, "export_task.json");
-      await fs.promises.writeFile(exportTaskPath, JSON.stringify(exportTask));
+      await fs.promises.writeFile(exportTaskPath, JSON.stringify(exportTask), { flag: "wx", mode: 0o600 });
 
       const packagedExportRoot = path.join(resourceBaseDir, "resources", "export");
       const packagedExportScriptPath = path.join(packagedExportRoot, "runner.mjs");

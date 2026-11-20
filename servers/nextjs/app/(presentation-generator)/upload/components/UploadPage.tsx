@@ -10,6 +10,7 @@
  */
 
 "use client";
+import { isGPTImage25Provider } from "@/utils/providerConstants";
 import React, { useEffect, useState } from "react";
 import { readMobileDraft, writeMobileDraft } from '@/lib/mobile-workspace-client';
 import { useRouter, usePathname } from "next/navigation";
@@ -28,7 +29,9 @@ import { sanitizeAnalyticsError } from "@/utils/analytics";
 import { ConfigurationSelects } from "./ConfigurationSelects";
 import { RootState } from "@/store/store";
 import { ImagesApi } from "../../services/api/images";
-import CurrentConfig from "./CurrentConfig";
+import GenerationModeDialog from "./GenerationModeDialog";
+import GenerateUserGuide from "./GenerateUserGuide";
+import Image from "next/image";
 import { LLMConfig } from "@/types/llm_config";
 import {
   clampSlideCountValue,
@@ -122,8 +125,8 @@ const getSelectedTextModel = (config?: LLMConfig): string => {
 
 const getSelectedImageQuality = (config?: LLMConfig): string => {
   if (!config) return "";
-  if (config.IMAGE_PROVIDER === "dall-e-3") return config.DALL_E_3_QUALITY || "";
-  if (config.IMAGE_PROVIDER === "gpt-image-1.5") return config.GPT_IMAGE_1_5_QUALITY || "";
+  if (config.IMAGE_PROVIDER === "gpt-image-2") return config.GPT_IMAGE_2_QUALITY || "";
+  if (isGPTImage25Provider(config.IMAGE_PROVIDER)) return config.GPT_IMAGE_2_5_QUALITY || "medium";
   return "";
 };
 
@@ -156,6 +159,7 @@ const UploadPage = ({
   const dispatch = useDispatch();
   const llmConfig = useSelector((state: RootState) => state.userConfig.llm_config);
 
+  const [modeDialogOpen, setModeDialogOpen] = useState(false);
   const [retained] = useState(() => readMobileDraft<{files: File[]; reference: CommunityPresentation | null; mode: GenerationMode; config: PresentationConfig}>('upload:form'));
   const [files, setFiles] = useState<File[]>(retained?.files ?? []);
   const [communityReference, setCommunityReference] =
@@ -613,6 +617,7 @@ const UploadPage = ({
 
   return (
     <Wrapper className="w-full pb-10">
+      <GenerateUserGuide mode={generationMode} communityEnabled={communityEnabled} />
       <OverlayLoader
         show={loadingState.isLoading}
         text={loadingState.message}
@@ -620,24 +625,37 @@ const UploadPage = ({
         duration={loadingState.duration}
         extra_info={loadingState.extra_info}
       />
-      <div className="mx-auto mb-8 max-w-[760px] space-y-[18px] px-4 lg:max-w-[780px] xl:max-w-[900px] min-[1600px]:max-w-[1050px] min-[1920px]:max-w-[1280px]">
-        <div className="flex min-h-[34px] w-full flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex flex-wrap items-center gap-2">
-            <CurrentConfig webSearchEnabled={config.webSearch} />
+      <GenerationModeDialog
+        open={modeDialogOpen}
+        onOpenChange={setModeDialogOpen}
+        onSelect={handleGenerationModeChange}
+        availableMode={presentationGenerationMode}
+      />
+      <div className="mx-auto max-w-[742px] space-y-[14px] px-4">
+        <div data-generate-guide="setup" className="motion-enter motion-delay-1 flex min-h-[62px] w-full flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+          <div className="flex flex-col gap-2">
+            <button type="button" onClick={() => setModeDialogOpen(true)} className="inline-flex items-center gap-1.5 self-start font-syne text-[13px] leading-[18px] text-[#4C4C4C] hover:text-[#7A5AF8] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#7A5AF8]">
+              <Image src="/generate/mode-info.svg" alt="" width={16} height={16} />
+              Presentation Mode
+              <Image src="/generate/mode-arrow.svg" alt="" width={14} height={14} />
+            </button>
+            <div role="group" aria-label="Presentation mode" data-selection={generationMode === "standard" ? "1" : "0"} className="motion-segments inline-flex h-9 w-[188px] items-center rounded-xl border border-[#EDEEEF] bg-white p-1 font-manrope text-[13px] font-medium text-[#191919] [--motion-segment-inset:4px]">
+              <span aria-hidden="true" className="motion-segment-indicator rounded-lg bg-[#F6F6F9]" />
+              {(["smart", "standard"] as const).map((mode) => (
+                <button key={mode} type="button" aria-pressed={generationMode === mode} disabled={!isGenerationModeAvailable(presentationGenerationMode, mode)} onClick={() => handleGenerationModeChange(mode)} className={`h-7 flex-1 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#7A5AF8] disabled:cursor-not-allowed disabled:opacity-40 ${generationMode === mode ? "" : "hover:bg-[#FAFAFC]"}`}>
+                  {mode === "smart" ? "Smart" : "Standard"}
+                </button>
+              ))}
+            </div>
           </div>
           <ConfigurationSelects
             compact
-            mode={generationMode}
-            onModeChange={
-              presentationGenerationMode === "both"
-                ? handleGenerationModeChange
-                : undefined
-            }
             config={config}
             onConfigChange={handleConfigChange}
           />
         </div>
 
+        <div data-generate-guide="prompt" className="motion-enter motion-delay-2">
         <PromptInput
           value={config.prompt}
           variant={generationMode}
@@ -661,13 +679,15 @@ const UploadPage = ({
             />
           }
         />
+        </div>
 
       </div>
 
       {communityEnabled && generationMode === "smart" && (
-        <div className="px-4 sm:px-6">
+        <div data-generate-guide="designs" className="motion-fade motion-delay-3 mt-[92px] px-4 sm:px-6 lg:px-[81px]">
           <CommunityReferencePicker
             selectedId={communityReference?.id ?? null}
+            onUsePrompt={(prompt) => handleConfigChange("prompt", prompt)}
             onSelect={(presentation) =>
               handleCommunityReferenceChange(presentation, "community_picker")
             }

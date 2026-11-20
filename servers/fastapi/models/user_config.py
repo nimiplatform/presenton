@@ -1,8 +1,15 @@
 from typing import Literal, Optional
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
+
+from utils.image_config import migrate_legacy_image_config
 
 
 class UserConfig(BaseModel):
+    @model_validator(mode="before")
+    @classmethod
+    def migrate_image_config(cls, data):
+        return migrate_legacy_image_config(data) if isinstance(data, dict) else data
+
     LLM: Optional[str] = None
 
     # OpenAI
@@ -109,10 +116,10 @@ class UserConfig(BaseModel):
     OPENAI_COMPAT_IMAGE_API_KEY: Optional[str] = None
     OPENAI_COMPAT_IMAGE_MODEL: Optional[str] = None
 
-    # Dalle 3 Quality
-    DALL_E_3_QUALITY: Optional[str] = None
-    # Gpt Image 1.5 Quality
-    GPT_IMAGE_1_5_QUALITY: Optional[str] = None
+    # GPT Image 2 Quality
+    GPT_IMAGE_2_QUALITY: Optional[str] = None
+    # Shared GPT Image 2.5 Flare / Sunburst quality
+    GPT_IMAGE_2_5_QUALITY: Optional[str] = None
 
     # Reasoning
     DISABLE_THINKING: Optional[bool] = None

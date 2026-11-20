@@ -5,6 +5,7 @@ import { setOutlines } from "@/store/slices/presentationGeneration";
 import { jsonrepair } from "jsonrepair";
 import { RootState } from "@/store/store";
 import { getApiUrl } from "@/utils/api";
+import { extractApiErrorMessage } from "@/utils/apiErrorMessages";
 import { limitOutlines } from "@/utils/presentationLimits";
 import {
   isChatGptAuthRequiredMessage,
@@ -244,16 +245,17 @@ export const useOutlineStreaming = (
               });
               break;
             }
-            if (!scheduleRetry(data.detail || "server returned stream error")) {
+            if (data.retryable === false || !scheduleRetry("server returned stream error")) {
+              clearRetryTimer();
               isClosed = true;
               dispatch(setOutlines([]));
               resetStreamingState();
               closeEventSource();
-              setError(data.detail || "The outline connection failed. Please try again.");
+              const errorMessage = extractApiErrorMessage(data, "The outline could not be generated. Please try again.", data.status_code);
+              setError(errorMessage);
               notify.error(
                 "Outline streaming failed",
-                data.detail ||
-                  "Failed to connect to the server. Please try again."
+                errorMessage
               );
             }
             break;

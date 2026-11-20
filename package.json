@@ -3,7 +3,7 @@
   "author": "Presenton contributors",
   "version": "0.9.11-beta.10",
   "license": "Apache-2.0",
-  "presentationExportVersion": "v1.0.34",
+  "presentationExportVersion": "v1.0.51",
   "type": "module",
   "description": "Open-source AI presentation generator",
   "scripts": {
@@ -44,7 +44,7 @@
     "@llamaindex/liteparse": "^1.5.2",
     "@nimiplatform/kit": "^0.24.0-rc.1",
     "@nimiplatform/sdk": "^0.24.0-rc.2",
-    "sharp": "^0.34.5"
+    "sharp": "^0.35.5"
   },
   "packageManager": "pnpm@10.34.7",
   "private": true,

@@ -34,7 +34,6 @@ from services.chat.schemas import (
     SaveSlideInput,
     SaveSmartSlideInput,
     SearchSlidesInput,
-    SetPresentationThemeInput,
     UpdateComponentInput,
     UpdateSlideInput,
     UpdateSlideComponentInput,
@@ -119,8 +118,6 @@ class ChatTools:
             "createComponent": self._add_slide_component,
             "updateComponent": self._update_component,
             "deleteComponent": self._delete_slide_component,
-            "getPresentationTheme": self._get_presentation_theme_catalog,
-            "setPresentationTheme": self._set_presentation_theme,
         }
 
     def set_turn_context(self, user_message: str) -> None:
@@ -252,7 +249,9 @@ class ChatTools:
                 name="getSlideAtIndex",
                 description=(
                     "Live SQL: one slide by index—authoritative for exact current content. "
-                    "Set includeFullContent=true when you need full JSON (before saveSlide or precise edits). "
+                    "Prefer elementPath or componentId to read one complete target before editing. "
+                    "Without a target, returns paginated discovery previews; use elementOffset for more. "
+                    "Set includeFullContent=true only for whole-slide JSON or HTML operations. "
                     "If user says slide N, use zero-based index N-1."
                 ),
                 schema=GetSlideAtIndexInput,
@@ -374,20 +373,6 @@ class ChatTools:
                     "or callout) from a rendered slide by componentId."
                 ),
                 schema=DeleteSlideComponentInput,
-                strict=False,
-            ),
-            Tool(
-                name="getPresentationTheme",
-                description="Read the current presentation theme and available themes.",
-                schema=NoArgsInput,
-                strict=False,
-            ),
-            Tool(
-                name="setPresentationTheme",
-                description=(
-                    "Change the deck theme by theme name/id/query or customTheme payload."
-                ),
-                schema=SetPresentationThemeInput,
                 strict=False,
             ),
             Tool(
@@ -607,16 +592,23 @@ class ChatTools:
         normalized_args = dict(args)
         normalized_args.setdefault("includeFullContent", False)
         payload = GetSlideAtIndexInput(**normalized_args)
+        read_options = {
+            "include_full_content": payload.include_full_content,
+            "element_path": payload.element_path,
+            "component_id": payload.component_id,
+            "element_offset": payload.element_offset or 0,
+            "element_limit": payload.element_limit or 30,
+        }
         slide = await self._memory.get_slide_at_index(
             payload.index,
-            include_full_content=payload.include_full_content,
+            **read_options,
         )
         if not slide and payload.index > 0:
             # Users often refer to slides as 1-based; allow a safe fallback.
             fallback_index = payload.index - 1
             fallback_slide = await self._memory.get_slide_at_index(
                 fallback_index,
-                include_full_content=payload.include_full_content,
+                **read_options,
             )
             if fallback_slide:
                 return {
@@ -734,7 +726,7 @@ class ChatTools:
     async def _get_template_summary(self, _: dict[str, Any]) -> dict[str, Any]:
         outline = await self._get_presentation_outline({})
         layouts = await self._get_available_layouts({})
-        theme = await self._get_presentation_theme_catalog({})
+        theme = await self._memory.get_template_theme()
         return {
             "outline": outline,
             "available_layouts": layouts,
@@ -759,10 +751,6 @@ class ChatTools:
             max_chars=payload.max_chars,
         )
 
-    async def _get_presentation_theme_catalog(
-        self, _: dict[str, Any]
-    ) -> dict[str, Any]:
-        return await self._memory.get_presentation_theme_catalog()
 
     async def _get_content_schema_from_layout_id(
         self, args: dict[str, Any]
@@ -1055,17 +1043,6 @@ class ChatTools:
             insert_index=payload.insert_index,
         )
 
-    async def _set_presentation_theme(self, args: dict[str, Any]) -> dict[str, Any]:
-        payload = SetPresentationThemeInput(**args)
-        return await self._memory.set_presentation_theme(
-            theme_query=payload.theme,
-            custom_theme=(
-                payload.custom_theme.model_dump(exclude_none=True)
-                if payload.custom_theme is not None
-                else None
-            ),
-            save_custom_theme=bool(payload.save_custom_theme),
-        )
 
     @staticmethod
     def _parse_args(arguments: str | None) -> dict[str, Any]:
@@ -1555,14 +1532,16 @@ class ChatTools:
 
         rows: list[dict[str, Any]] = []
         seen_labels: set[str] = set()
-        segments = re.split(r"[\n;,|]+|\s+\band\b\s+", text, flags=re.IGNORECASE)
+        segments = re.split(
+            r"[\n;,|]+|(?<=\s)\band\b(?=\s)", text, flags=re.IGNORECASE
+        )
         for segment in segments:
             segment = segment.strip(" \t\r\n.:-–—")
             if not segment:
                 continue
             for match in re.finditer(
                 r"(?P<label>[A-Za-z][A-Za-z0-9&'./() -]{0,80}?)"
-                r"\s*(?:[:=\-–—]|\bhas\b|\bhave\b|\bwith\b)?\s+"
+                r"(?:\s*(?:[:=\-–—]|\bhas\b|\bhave\b|\bwith\b))?\s+"
                 r"(?P<value>[-+]?(?:\d[\d,]*(?:\.\d+)?|\.\d+))\b",
                 segment,
                 flags=re.IGNORECASE,
@@ -1591,11 +1570,14 @@ class ChatTools:
         if not text:
             return None
 
-        marker_match = re.search(r"\bdata\s*:\s*(?P<data>.+)$", text, re.IGNORECASE | re.DOTALL)
-        if marker_match:
+        marker_match = re.search(r"\bdata\s*:", text, re.IGNORECASE)
+        if marker_match and marker_match.end() < len(text):
             header_text = text[: marker_match.start()]
             headers = cls._extract_table_headers(header_text)
-            rows = cls._parse_table_rows(marker_match.group("data"))
+            data_text = text[marker_match.end():]
+            # Preserve the previous nonempty capture for whitespace-only input.
+            data_text = data_text.lstrip() or data_text[-1:]
+            rows = cls._parse_table_rows(data_text)
             if headers and rows:
                 normalized_rows = cls._align_table_rows(rows, len(headers))
                 if normalized_rows:
@@ -1614,8 +1596,8 @@ class ChatTools:
     def _extract_table_headers(cls, text: str) -> list[str]:
         patterns = (
             r"\bfirst\s+row\s+with\s+(?P<headers>[^.\n;]+)",
-            r"\bheaders?\s*(?:are|with|:)?\s+(?P<headers>[^.\n;]+)",
-            r"\bcolumns?\s*(?:are|with|:)?\s+(?P<headers>[^.\n;]+)",
+            r"\bheaders?(?:\s*(?:are|with|:))?\s+(?P<headers>[^.\n;]+)",
+            r"\bcolumns?(?:\s*(?:are|with|:))?\s+(?P<headers>[^.\n;]+)",
         )
         for pattern in patterns:
             match = re.search(pattern, text, flags=re.IGNORECASE)
@@ -1642,11 +1624,19 @@ class ChatTools:
 
     @staticmethod
     def _split_table_cells(text: str) -> list[str]:
-        cells = [
-            cell.strip(" \t\r\n.:-–—")
-            for cell in re.split(r"\s*\|\s*|\s*,\s*", text or "")
-        ]
-        return [cell for cell in cells if cell]
+        raw_cells = re.split(r"[|,]", text or "")
+        cells: list[str] = []
+        for index, cell in enumerate(raw_cells):
+            # Only delimiter-adjacent whitespace was consumed by the original
+            # splitter; preserve Unicode whitespace at the outer text edges.
+            if index > 0:
+                cell = cell.lstrip()
+            if index < len(raw_cells) - 1:
+                cell = cell.rstrip()
+            cell = cell.strip(" \t\r\n.:-–—")
+            if cell:
+                cells.append(cell)
+        return cells
 
     @staticmethod
     def _align_table_rows(rows: list[list[str]], column_count: int) -> list[list[str]]:

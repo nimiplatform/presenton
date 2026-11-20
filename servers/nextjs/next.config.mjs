@@ -3,6 +3,7 @@ import { fileURLToPath } from "node:url";
 
 const nextjsRoot = path.dirname(fileURLToPath(import.meta.url));
 const isElectronBuild = process.env.PRESENTON_ELECTRON_BUILD === "true";
+const isElectronRuntime = process.env.PRESENTON_ELECTRON === "true";
 
 const nextConfig = {
   reactStrictMode: false,
@@ -10,19 +11,26 @@ const nextConfig = {
   output: "standalone",
   // Text repair, icon indexing and media Jobs outlive Next's 30-second proxy
   // default. Keep the supervised business stream connected with a finite budget.
-  experimental: { proxyTimeout: 600_000 },
+  experimental: {
+    proxyTimeout: 600_000,
+    agentUpgrade: "security",
+  },
   outputFileTracingRoot: path.resolve(nextjsRoot, "../.."),
   outputFileTracingExcludes: {
     "/*": ["../../.nimi/**/*", "../../.cache/**/*", "../fastapi/**/*",
       "../../resources/**/*", "../../electron/**/*", "../../presentation-export/**/*"],
   },
-  async headers() {
-    // Sandboxed template previews have an opaque origin. These bundled fonts
-    // are public assets; business data and APIs keep their Host access checks.
-    return [{ source: "/vendor/fonts/:path*", headers: [{ key: "Access-Control-Allow-Origin", value: "*" }] }];
-  },
   turbopack: {
     root: path.resolve(nextjsRoot, "../.."),
+  },
+  async headers() {
+    return [
+      {
+        source: "/vendor/fonts/:path*",
+        // Sandboxed template and community previews load public fonts from an opaque origin.
+        headers: [{ key: "Access-Control-Allow-Origin", value: "*" }],
+      },
+    ];
   },
   ...(process.env.NODE_ENV !== "production"
     ? {
@@ -37,7 +45,7 @@ const nextConfig = {
     // A packaged Electron app is installed under a read-only directory such as
     // /opt/Presenton. Next's optimizer writes to <distDir>/cache, so emit direct
     // image URLs for that build instead of attempting runtime cache writes.
-    unoptimized: isElectronBuild || process.env.PRESENTON_WEB === 'true',
+    unoptimized: isElectronBuild || isElectronRuntime || process.env.PRESENTON_WEB === 'true',
     remotePatterns: [
       {
         protocol: "https",
@@ -77,7 +85,6 @@ const nextConfig = {
       },
     ],
   },
-  
 };
 
 export default nextConfig;

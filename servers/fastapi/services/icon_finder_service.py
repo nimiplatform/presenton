@@ -11,7 +11,15 @@ class IconFinderService:
         self._index = None
         self._lock = threading.Lock()
 
-    def _search(self, query, k):
+    @property
+    def cache_directory(self) -> str:
+        return (
+            os.getenv("PRESENTON_FASTEMBED_ICON_CACHE_DIR")
+            or os.getenv("FASTEMBED_CACHE_PATH")
+            or ""
+        )
+
+    def _ensure_index(self):
         with self._lock:
             if self._index is None:
                 from services.mem0_oss_memory import get_shared_mem0_client
@@ -25,7 +33,13 @@ class IconFinderService:
                         notes.setdefault(name, name + "\n" + icon.get("tags", ""))
                     index.add_notes(notes.values(), user_id="icons")
                 self._index = index
-            return self._index.search(query, user_id="icons", limit=k)["results"]
+            return self._index
+
+    def ensure_initialized(self) -> bool:
+        return self._ensure_index() is not None
+
+    def _search(self, query, k):
+        return self._ensure_index().search(query, user_id="icons", limit=k)["results"]
 
     async def search_icons(self, query: str, k: int = 1, weight: str | None = None):
         result = await asyncio.to_thread(self._search, query, k)

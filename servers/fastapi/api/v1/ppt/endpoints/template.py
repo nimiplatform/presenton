@@ -53,6 +53,7 @@ from api.v1.auth.context import (
     set_current_owner_is_admin,
 )
 from services.export_task_service import EXPORT_TASK_SERVICE
+from templates.cloning import clone_builtin_template
 from utils.get_env import get_presenton_public_url
 from utils.mcp_public_urls import is_mcp_request
 from templates.preview import (
@@ -68,6 +69,7 @@ from templates.v2.generation import (
 )
 from templates.v2.models.elements import Image as SlideImageElement
 from templates.v2.models.layouts import (
+    LayoutGenerationOptions,
     MergedComponents,
     RawSlideLayouts,
     SlideLayout,
@@ -89,6 +91,7 @@ from utils.icon_weights import (
 )
 from utils.datetime_utils import get_current_utc_datetime
 from utils.llm_client_error_handler import handle_llm_client_exceptions
+from utils.safe_logging import safe_log, safe_log_exception
 
 
 TEMPLATE_ROUTER = APIRouter(prefix="/template", tags=["Templates"])
@@ -141,6 +144,9 @@ class InitTemplateRequest(BaseModel):
     name: Optional[str] = None
     description: Optional[str] = None
     icon_type: Optional[IconType] = DEFAULT_ICON_TYPE
+    generation_options: LayoutGenerationOptions = Field(
+        default_factory=LayoutGenerationOptions
+    )
 
 
 class CreateTemplateRequest(InitTemplateRequest):
@@ -230,6 +236,7 @@ class CreateTemplateLayoutsRequest(BaseModel):
     template_id: str = Field(validation_alias=AliasChoices("template_id", "id"))
     index: Optional[int] = Field(default=None, ge=0)
     indices: Optional[list[int]] = None
+    generation_options: Optional[LayoutGenerationOptions] = None
 
     @model_validator(mode="after")
     def _validate_indices(self) -> "CreateTemplateLayoutsRequest":
@@ -548,10 +555,40 @@ def _count_layouts(layouts_json: Any) -> int:
     return 0
 
 
+def _explicit_template_generation_options(request: InitTemplateRequest) -> dict[str, Any]:
+    if "generation_options" not in request.model_fields_set:
+        return {}
+    return {"generation_options": request.generation_options.model_dump(mode="json")}
+
+
+def _template_generation_options(
+    template: TemplateV2,
+    override: LayoutGenerationOptions | None = None,
+) -> LayoutGenerationOptions:
+    assets = template.assets if isinstance(template.assets, dict) else {}
+    try:
+        options = LayoutGenerationOptions.model_validate(
+            assets.get("generation_options") or {}
+        )
+    except ValidationError:
+        LOGGER.warning(
+            "[template.layouts.create] invalid saved generation options "
+            "template_id=%s; using defaults",
+            template.id,
+        )
+        options = LayoutGenerationOptions()
+    if override is not None:
+        options = options.model_copy(
+            update=override.model_dump(include=override.model_fields_set)
+        )
+    return options
+
+
 async def _generate_slide_layouts(
     raw_layouts: RawSlideLayouts,
     slide_image_urls: list[str],
     fonts: dict[str, str] | None = None,
+    generation_options: LayoutGenerationOptions | None = None,
 ) -> SlideLayouts:
     LOGGER.info(
         "[template.create] slide layout generation start slides=%d",
@@ -563,6 +600,7 @@ async def _generate_slide_layouts(
             raw_layouts,
             slide_image_urls,
             fonts,
+            generation_options,
         )
         layouts = _coerce_generated_slide_layouts(generated_layouts)
     except (ValidationError, ValueError) as exc:
@@ -677,6 +715,7 @@ async def _generate_slide_layouts_with_task_progress(
     *,
     name: str | None,
     thumbnail: str | None,
+    generation_options: LayoutGenerationOptions | None = None,
 ) -> SlideLayouts:
     if not raw_layouts.layouts:
         raise ValueError("layouts must contain at least one slide layout")
@@ -707,6 +746,7 @@ async def _generate_slide_layouts_with_task_progress(
                 index,
                 slide_image_urls[index],
                 fonts,
+                generation_options=generation_options,
             ),
         )
         layout = (
@@ -886,8 +926,8 @@ async def _prepare_template_source(
     *,
     operation: str,
 ) -> tuple[str, RawSlideLayouts, dict[str, Any], dict[str, str]]:
-    LOGGER.info(
-        "[template.%s] request received pptx_url=%s slide_images=%d "
+    safe_log(LOGGER, logging.INFO,
+        "[template.%s] request received pptx_url=%r slide_images=%d "
         "font_count=%d has_name=%s",
         operation,
         request.pptx_url,
@@ -897,9 +937,9 @@ async def _prepare_template_source(
     )
     pptx_path = resolve_app_path_to_filesystem(request.pptx_url)
     if not pptx_path or not os.path.isfile(pptx_path):
-        LOGGER.warning(
+        safe_log(LOGGER, logging.WARNING,
             "[template.%s] rejected request; PPTX file not found "
-            "pptx_url=%s resolved_path=%s",
+            "pptx_url=%r resolved_path=%r",
             operation,
             request.pptx_url,
             pptx_path,
@@ -913,8 +953,8 @@ async def _prepare_template_source(
             ),
         )
 
-    LOGGER.info(
-        "[template.%s] converting PPTX to JSON pptx_path=%s",
+    safe_log(LOGGER, logging.INFO,
+        "[template.%s] converting PPTX to JSON pptx_path=%r",
         operation,
         pptx_path,
     )
@@ -924,9 +964,9 @@ async def _prepare_template_source(
             pptx_json.model_dump(mode="json")
         )
     except ValidationError as exc:
-        LOGGER.exception(
+        safe_log_exception(LOGGER,
             "[template.%s] PPTX-to-JSON export produced invalid slide "
-            "layout JSON pptx_path=%s",
+            "layout JSON pptx_path=%r",
             operation,
             pptx_path,
         )
@@ -934,8 +974,8 @@ async def _prepare_template_source(
             status_code=500,
             detail="PPTX-to-JSON export produced invalid slide layout JSON",
         ) from exc
-    LOGGER.info(
-        "[template.%s] PPTX-to-JSON validation complete pptx_path=%s "
+    safe_log(LOGGER, logging.INFO,
+        "[template.%s] PPTX-to-JSON validation complete pptx_path=%r "
         "slides=%d",
         operation,
         pptx_path,
@@ -1032,6 +1072,7 @@ def _generate_indexed_slide_layouts(
     indices: list[int],
     slide_image_urls: list[str | None],
     fonts: dict[str, str],
+    generation_options: LayoutGenerationOptions | None = None,
 ) -> list[CreatedTemplateSlideLayout]:
     max_workers = min(MAX_PARALLEL_SLIDE_LAYOUTS, len(indices))
     layouts_by_index: dict[int, SlideLayout] = {}
@@ -1045,6 +1086,7 @@ def _generate_indexed_slide_layouts(
                     index,
                     slide_image_urls[index],
                     fonts,
+                    generation_options=generation_options,
                 ),
             ): index
             for index in indices
@@ -1246,6 +1288,7 @@ async def init_template(
         raw_layouts=raw_layouts_json,
         layouts=None,
         assets={
+            **_explicit_template_generation_options(request),
             "pptx_url": request.pptx_url,
             "icon_type": icon_type,
             "icon_weight": icon_type,
@@ -1256,7 +1299,7 @@ async def init_template(
         },
     )
     LOGGER.info(
-        "[template.init] persisting template name=%s slides=%d images=%d",
+        "[template.init] persisting template name=%r slides=%d images=%d",
         template.name,
         len(raw_layouts.layouts),
         len(template.assets.get("images", [])),
@@ -1265,7 +1308,7 @@ async def init_template(
     await sql_session.commit()
     await sql_session.refresh(template)
     LOGGER.info(
-        "[template.init] template persisted template_id=%s name=%s",
+        "[template.init] template persisted template_id=%s name=%r",
         template.id,
         template.name,
     )
@@ -1301,6 +1344,7 @@ def _build_created_template(
             else None
         ),
         assets={
+            **_explicit_template_generation_options(request),
             "icon_type": icon_type,
             "icon_weight": icon_type,
             "fonts": available_fonts,
@@ -1321,6 +1365,7 @@ async def _create_template_sync(
         raw_layouts,
         request.slide_image_urls,
         available_fonts,
+        generation_options=request.generation_options,
     )
     generated_layouts = _with_randomized_layout_ids(generated_layouts)
     merged_components, generated_theme = await asyncio.gather(
@@ -1337,7 +1382,7 @@ async def _create_template_sync(
         generated_theme=generated_theme,
     )
     LOGGER.info(
-        "[template.create] persisting template name=%s slides=%d images=%d",
+        "[template.create] persisting template name=%r slides=%d images=%d",
         template.name,
         len(raw_layouts.layouts),
         len(template.assets.get("images", [])),
@@ -1346,7 +1391,7 @@ async def _create_template_sync(
     await sql_session.commit()
     await sql_session.refresh(template)
     LOGGER.info(
-        "[template.create] template persisted template_id=%s name=%s",
+        "[template.create] template persisted template_id=%s name=%r",
         template.id,
         template.name,
     )
@@ -1384,6 +1429,7 @@ async def _create_template_with_task_progress(
             sql_session,
             name=name,
             thumbnail=thumbnail,
+            generation_options=request.generation_options,
         )
     except (ValidationError, ValueError) as exc:
         LOGGER.exception(
@@ -1411,7 +1457,7 @@ async def _create_template_with_task_progress(
         generated_theme=generated_theme,
     )
     LOGGER.info(
-        "[template.create.async] persisting template task_id=%s name=%s "
+        "[template.create.async] persisting template task_id=%s name=%r "
         "slides=%d images=%d",
         task.id,
         template.name,
@@ -1423,7 +1469,7 @@ async def _create_template_with_task_progress(
     await sql_session.refresh(template)
     LOGGER.info(
         "[template.create.async] template persisted task_id=%s "
-        "template_id=%s name=%s",
+        "template_id=%s name=%r",
         task.id,
         template.id,
         template.name,
@@ -1545,7 +1591,10 @@ async def create_template(
         type=ASYNC_TASK_TYPE_TEMPLATE_CREATE,
         status=AsyncTaskStatus.PENDING,
         message="Queued for template creation",
-        payload=request.model_dump(mode="json"),
+        payload={
+            **request.model_dump(mode="json", exclude={"generation_options"}),
+            **_explicit_template_generation_options(request),
+        },
     )
     task.data = _template_task_progress_data(
         created_layouts=0,
@@ -1662,7 +1711,7 @@ async def generate_template_layout_from_prompt(
     try:
         template_layouts = _coerce_template_slide_layouts(template.layouts)
     except ValidationError as exc:
-        LOGGER.exception(
+        safe_log_exception(LOGGER,
             "[template.layouts.generate] template has invalid layouts "
             "template_id=%s",
             request.template_id,
@@ -1679,14 +1728,14 @@ async def generate_template_layout_from_prompt(
                 template.merged_components
             )
         except ValidationError:
-            LOGGER.warning(
+            safe_log(LOGGER, logging.WARNING,
                 "[template.layouts.generate] ignoring invalid merged components "
                 "template_id=%s",
                 request.template_id,
                 exc_info=True,
             )
 
-    LOGGER.info(
+    safe_log(LOGGER, logging.INFO,
         "[template.layouts.generate] prompted layout generation start "
         "template_id=%s reference_layouts=%d",
         request.template_id,
@@ -1703,7 +1752,7 @@ async def generate_template_layout_from_prompt(
             _get_template_fonts(template),
         )
     except Exception as exc:
-        LOGGER.exception(
+        safe_log_exception(LOGGER,
             "[template.layouts.generate] prompted layout generation failed "
             "template_id=%s",
             request.template_id,
@@ -1715,7 +1764,7 @@ async def generate_template_layout_from_prompt(
         if isinstance(layout, SlideLayout)
         else SlideLayout.model_validate(layout)
     )
-    LOGGER.info(
+    safe_log(LOGGER, logging.INFO,
         "[template.layouts.generate] prompted layout generation complete "
         "template_id=%s layout_id=%s components=%d",
         request.template_id,
@@ -1753,7 +1802,7 @@ async def create_template_slide_layouts(
     try:
         raw_layouts = RawSlideLayouts.model_validate(template.raw_layouts)
     except ValidationError as exc:
-        LOGGER.exception(
+        safe_log_exception(LOGGER,
             "[template.layouts.create] template has invalid raw layouts "
             "template_id=%s",
             request.template_id,
@@ -1778,7 +1827,7 @@ async def create_template_slide_layouts(
             detail="Slide image URL is unavailable for requested slide index",
         )
 
-    LOGGER.info(
+    safe_log(LOGGER, logging.INFO,
         "[template.layouts.create] slide layout creation start "
         "template_id=%s slides=%s/%d",
         request.template_id,
@@ -1792,9 +1841,10 @@ async def create_template_slide_layouts(
             indices,
             slide_image_urls,
             _get_template_fonts(template),
+            _template_generation_options(template, request.generation_options),
         )
     except (ValidationError, ValueError) as exc:
-        LOGGER.exception(
+        safe_log_exception(LOGGER,
             "[template.layouts.create] slide layout creation produced "
             "invalid output template_id=%s slides=%s",
             request.template_id,
@@ -1805,7 +1855,7 @@ async def create_template_slide_layouts(
             detail="Slide layout creation produced invalid output",
         ) from exc
 
-    LOGGER.info(
+    safe_log(LOGGER, logging.INFO,
         "[template.layouts.create] slide layout creation complete "
         "template_id=%s slides=%s components=%d",
         request.template_id,
@@ -1837,7 +1887,7 @@ async def generate_template_blocks(
     try:
         layouts = _coerce_template_slide_layouts(template.layouts)
     except ValidationError as exc:
-        LOGGER.exception(
+        safe_log_exception(LOGGER,
             "[template.generate_blocks] template has invalid layouts "
             "template_id=%s",
             request.template_id,
@@ -1860,7 +1910,7 @@ async def generate_template_blocks(
     sql_session.add(template)
     await sql_session.commit()
     await sql_session.refresh(template)
-    LOGGER.info(
+    safe_log(LOGGER, logging.INFO,
         "[template.generate_blocks] component blocks generated "
         "template_id=%s layouts=%d merged_components=%d",
         request.template_id,
@@ -1892,7 +1942,7 @@ async def patch_template_slide_layout(
                 request.layout_items,
             )
         except ValidationError as exc:
-            LOGGER.exception(
+            safe_log_exception(LOGGER,
                 "[template.patch_layout] template has invalid layouts "
                 "template_id=%s",
                 template_id,
@@ -1910,7 +1960,7 @@ async def patch_template_slide_layout(
         sql_session.add(template)
         await sql_session.commit()
         await sql_session.refresh(template)
-        LOGGER.info(
+        safe_log(LOGGER, logging.INFO,
             "[template.patch_layout] slide layouts patched template_id=%s "
             "slides=%s saved_layouts=%d",
             template_id,
@@ -2100,6 +2150,21 @@ async def get_template(
         ),
         fonts=_get_template_fonts(template),
     )
+
+
+@TEMPLATE_ROUTER.post("/{template_id}/clone", status_code=201, response_model=str)
+async def clone_template(
+    template_id: str = Path(...),
+    sql_session: AsyncSession = Depends(get_async_session),
+):
+    template = await sql_session.get(TemplateV2, template_id)
+    if not template:
+        raise HTTPException(status_code=404, detail="Template not found")
+    try:
+        return await clone_builtin_template(template, sql_session)
+    except OSError as exc:
+        safe_log(LOGGER, logging.ERROR, "Could not copy built-in template assets: %s", exc)
+        raise HTTPException(500, "Could not copy template assets. Please try again.") from exc
 
 
 @TEMPLATE_ROUTER.delete("/{template_id}", status_code=204)
