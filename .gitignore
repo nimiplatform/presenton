@@ -45,3 +45,6 @@ dist/nimi-app/
 resources/presenton-worker/
 
 .next-production/
+.next-web/
+!/android/app/src/debug/
+!/android/app/src/debug/**

@@ -9,6 +9,10 @@ const APP_ID = 'io.github.nimiplatform.presenton';
 const CAPABILITIES = ['text.generate', 'image.generate', 'text.embed'];
 
 export default function NimiModelConfig() {
+  if (process.env.NEXT_PUBLIC_NIMI_WEB_CONFIG) return <section className="space-y-3"><h2 className="text-xl font-semibold">AI models on your PC</h2><p>Presenton runs presentation workflows on your PC using that workspace’s model choices. Open Presenton on the PC → Settings → AI models to configure writing, generated images, and document or icon search.</p></section>;
+  return <PCModelConfig/>;
+}
+function PCModelConfig() {
   const [snapshot, setSnapshot] = useState<NimiAIConfigSnapshot | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

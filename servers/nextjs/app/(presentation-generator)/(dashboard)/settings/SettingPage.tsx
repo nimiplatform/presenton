@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import { useDispatch } from 'react-redux';
 import NimiModelConfig from '@/components/NimiModelConfig';
+import PresentonWebStatus from '@/components/PresentonWebStatus';
 import OnboardingPresentonAccount from '@/components/OnBoarding/OnboardingPresentonAccount';
 import { Button } from '@/components/ui/button';
 import { setLLMConfig } from '@/store/slices/userConfig';
@@ -39,6 +40,7 @@ export default function SettingsPage() {
   return <main className="mx-auto max-w-6xl px-6 py-10 md:px-10">
     <h1 className="font-syne text-3xl text-[#191919]">Settings</h1>
     <p className="mt-3 max-w-2xl text-base text-[#525252]">Manage your AI models in Nimi and choose the services used by your presentations.</p>
+    <PresentonWebStatus />
     <nav className="mt-8 flex flex-wrap gap-2 border-b border-[#EDEEEF] pb-4" aria-label="Settings sections">
       {Object.entries({ models: 'AI models', images: 'Images', search: 'Web search', community: 'Community account' }).map(([key, label]) =>
         <Button key={key} variant={section === key ? 'default' : 'outline'} onClick={() => setSection(key)} aria-pressed={section === key}>{label}</Button>)}

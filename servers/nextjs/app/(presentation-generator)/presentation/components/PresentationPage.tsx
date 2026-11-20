@@ -23,7 +23,7 @@ import {
   AlertCircle,
   ChevronRight,
   Keyboard,
-  Sparkles,
+  PanelRight,
   X,
 } from "lucide-react";
 import {
@@ -847,7 +847,7 @@ const PresentationPage: React.FC<PresentationPageProps> = ({
   }
 
   return (
-    <div className="h-dvh overflow-hidden font-syne">
+    <div className="overflow-hidden font-syne" style={{ height: 'calc(100dvh - var(--presenton-shell-bar, 0px))' }}>
       <OverlayLoader
         show={loadingState.isLoading}
         text={loadingState.message}
@@ -971,13 +971,13 @@ const PresentationPage: React.FC<PresentationPageProps> = ({
                 "linear-gradient(270deg, #D5CAFC 2.4%, #E3D2EB 27.88%, #F4DCD3 69.23%, #FDE4C2 100%)",
             }}
           >
-            <Sparkles className="h-4 w-4 text-[#7A5AF8]" aria-hidden="true" />
-            AI Assistant
+            <PanelRight className="h-4 w-4 text-[#7A5AF8]" aria-hidden="true" />
+            Slide tools
           </button>
 
           <button
             type="button"
-            aria-label="Close AI Assistant"
+            aria-label="Close slide tools"
             onClick={closeMobileAssistant}
             className={cn(
               "inset-0 z-[60] bg-black/35 xl:hidden",
@@ -988,7 +988,7 @@ const PresentationPage: React.FC<PresentationPageProps> = ({
           <div
             id="presentation-mobile-assistant"
             role={isMobileAssistantOpen ? "dialog" : undefined}
-            aria-label={isMobileAssistantOpen ? "AI Assistant" : undefined}
+            aria-label={isMobileAssistantOpen ? "Slide tools" : undefined}
             aria-modal={isMobileAssistantOpen ? true : undefined}
             className={cn(
               "h-screen w-[calc(100vw-16px)] max-w-[375px] shrink-0 flex-col bg-white shadow-[-12px_0_32px_rgba(16,24,40,0.18)] transition-[width] duration-200 xl:relative xl:z-auto xl:h-full xl:max-w-none xl:self-start xl:border-l xl:border-[#EDEEEF] xl:shadow-none",
@@ -1014,19 +1014,20 @@ const PresentationPage: React.FC<PresentationPageProps> = ({
             ) : null}
             <div className="flex h-14 shrink-0 items-center justify-between border-b border-[#EDEEEF] px-4 xl:hidden">
               <div className="flex items-center gap-2 text-sm font-semibold text-[#101323]">
-                <Sparkles className="h-4 w-4 text-[#7A5AF8]" aria-hidden="true" />
-                AI Assistant
+                <PanelRight className="h-4 w-4 text-[#7A5AF8]" aria-hidden="true" />
+                Slide tools
               </div>
               <button
                 ref={mobileAssistantCloseRef}
                 type="button"
-                aria-label="Close AI Assistant"
+                aria-label="Close slide tools"
                 onClick={closeMobileAssistant}
                 className="flex h-8 w-8 items-center justify-center rounded-full text-[#667085] transition hover:bg-[#F6F6F9] hover:text-[#101323] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#7A5AF8]"
               >
                 <X className="h-4 w-4" aria-hidden="true" />
               </button>
             </div>
+            {isTemplateV2Presentation && <p className="border-b px-4 py-3 text-xs leading-relaxed text-[#667085] xl:hidden">Insert text, images and tables, or ask AI to edit. Double-tap an image on the slide to replace or upload.</p>}
             <div className="min-h-0 flex-1">
               <PresentationActions
                 presentationId={presentation_id}

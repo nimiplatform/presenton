@@ -31,10 +31,25 @@ const DashboardSidebar = ({
     showTemplates = true,
 }: DashboardSidebarProps) => {
     const pathname = usePathname();
+    const mobileLinks = [
+        { href: '/dashboard', label: 'Dashboard' },
+        ...(showTemplates ? [{ href: '/templates', label: 'Templates' }] : []),
+        ...(showCommunity ? [{ href: '/community', label: 'Community' }] : []),
+        { href: '/settings', label: 'Settings' },
+        { href: 'https://docs.presenton.ai/help', label: 'Help' },
+    ];
 
     return (
+        <>
+        <nav className="flex items-center gap-1 overflow-x-auto border-b border-[#E1E1E5] bg-[#F6F6F9] px-2 py-1 md:hidden" aria-label="Presenton navigation">
+            {mobileLinks.map(item => <Link key={item.href} href={item.href} prefetch={false}
+                target={item.href.startsWith('https:') ? '_blank' : undefined} rel={item.href.startsWith('https:') ? 'noreferrer' : undefined}
+                aria-current={pathname === item.href ? 'page' : undefined}
+                className={`flex min-h-11 flex-1 items-center justify-center rounded-lg px-1.5 text-xs ${pathname === item.href ? 'bg-[#EDE9FE] font-semibold text-[#5146E5]' : 'text-slate-700'}`}>{item.label}</Link>)}
+        </nav>
         <aside
-            className="sticky top-0 flex h-screen w-[114px] shrink-0 flex-col justify-between border-r border-[#E1E1E5] bg-[#F6F6F9] px-4 py-8 backdrop-blur"
+            className="sticky hidden w-[114px] shrink-0 flex-col justify-between border-r border-[#E1E1E5] bg-[#F6F6F9] px-4 py-8 backdrop-blur md:flex"
+            style={{ top: 'var(--presenton-shell-bar, 0px)', height: 'calc(100dvh - var(--presenton-shell-bar, 0px))' }}
             aria-label="Dashboard sidebar"
         >
             <div>
@@ -125,6 +140,7 @@ const DashboardSidebar = ({
             </div>
 
         </aside>
+        </>
     );
 };
 

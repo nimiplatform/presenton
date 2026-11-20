@@ -11,6 +11,7 @@
 
 "use client";
 import React, { useEffect, useState } from "react";
+import { readMobileDraft, writeMobileDraft } from '@/lib/mobile-workspace-client';
 import { useRouter, usePathname } from "next/navigation";
 import { useDispatch, useSelector } from "react-redux";
 import { clearOutlines, setPresentationId } from "@/store/slices/presentationGeneration";
@@ -155,13 +156,14 @@ const UploadPage = ({
   const dispatch = useDispatch();
   const llmConfig = useSelector((state: RootState) => state.userConfig.llm_config);
 
-  const [files, setFiles] = useState<File[]>([]);
+  const [retained] = useState(() => readMobileDraft<{files: File[]; reference: CommunityPresentation | null; mode: GenerationMode; config: PresentationConfig}>('upload:form'));
+  const [files, setFiles] = useState<File[]>(retained?.files ?? []);
   const [communityReference, setCommunityReference] =
-    useState<CommunityPresentation | null>(null);
+    useState<CommunityPresentation | null>(retained?.reference ?? null);
   const [generationMode, setGenerationMode] = useState<GenerationMode>(() =>
-    getInitialGenerationMode(presentationGenerationMode),
+    retained?.mode ?? getInitialGenerationMode(presentationGenerationMode),
   );
-  const [config, setConfig] = useState<PresentationConfig>({
+  const [config, setConfig] = useState<PresentationConfig>(retained?.config ?? {
     slides: null,
     language: LanguageType.Auto,
     prompt: "",
@@ -173,7 +175,10 @@ const UploadPage = ({
     webSearch: false,
   });
 
+  useEffect(() => { writeMobileDraft('upload:form', { files, reference: communityReference, mode: generationMode, config }); }, [files, communityReference, generationMode, config]);
+
   useEffect(() => {
+    if (retained) return;
     const params = new URLSearchParams(window.location.search);
     const requestedPrompt = params.get("prompt")?.trim();
     const requestedCommunityId = Number(params.get("communityId"));
@@ -222,6 +227,7 @@ const UploadPage = ({
   }, [communityEnabled, pathname, presentationGenerationMode]);
 
   useEffect(() => {
+    if (retained) return;
     if (llmConfig?.WEB_GROUNDING !== undefined) {
       setConfig((current) => ({
         ...current,
@@ -523,6 +529,7 @@ const UploadPage = ({
     });
     const destination = getGenerationDestination(createResponse.id);
     trackEvent(MixpanelEvent.Navigation, { from: pathname, to: destination });
+    writeMobileDraft('upload:form', undefined);
     router.push(destination);
   };
 
@@ -576,6 +583,7 @@ const UploadPage = ({
     });
     const destination = getGenerationDestination(createResponse.id);
     trackEvent(MixpanelEvent.Navigation, { from: pathname, to: destination });
+    writeMobileDraft('upload:form', undefined);
     router.push(destination);
   };
 

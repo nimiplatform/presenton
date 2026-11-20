@@ -654,7 +654,8 @@ class SlideElementStrokeInput(OpenAIStrictSchemaModel):
     dash: list[float] | None = Field(..., min_length=1, max_length=12)
 
 
-class UpdateSlideElementInput(OpenAIStrictSchemaModel):
+# @nimi-authority: rule.nimi.runtime.ai-provider.local-app-text-behaviors
+class UpdateSlideElementInput(StrictSchemaModel):
     index: int = Field(..., ge=0, le=1000)
     element_path: str = Field(
         ...,
@@ -667,31 +668,31 @@ class UpdateSlideElementInput(OpenAIStrictSchemaModel):
         ),
     )
     text: str | None = Field(
-        ...,
+        None,
         min_length=0,
         max_length=20000,
         description="Replacement text for a text element or replacement image/icon data.",
     )
     items: list[str] | None = Field(
-        ...,
+        None,
         min_length=1,
         max_length=100,
         description="Replacement item text for a text-list element.",
     )
     table_cell: SlideElementTableCellInput | None = Field(
-        ...,
+        None,
         alias="tableCell",
         description="A single table header/body cell update.",
     )
     chart: SlideElementChartInput | None = Field(
-        ...,
+        None,
         description=(
             "Chart update using the new chart model: chartType, title, "
             "categories, series.values, colors, axes, data labels, and legend."
         ),
     )
     vector: SlideElementVectorInput | None = Field(
-        ...,
+        None,
         description=(
             "Vector update using shape, points, closed, smooth curve, cornerRadii, "
             "and optional startMarker/endMarker line endpoints. "
@@ -699,17 +700,17 @@ class UpdateSlideElementInput(OpenAIStrictSchemaModel):
         ),
     )
     infographic: SlideElementInfographicInput | None = Field(
-        ...,
+        None,
         description=(
             "Infographic update using catalog-native nested data and ordered colors."
         ),
     )
     table: SlideElementTableInput | None = Field(
-        ...,
+        None,
         description="Whole table update with columns/headers and rows.",
     )
     element: str | None = Field(
-        ...,
+        None,
         min_length=2,
         max_length=120000,
         description=(
@@ -722,26 +723,26 @@ class UpdateSlideElementInput(OpenAIStrictSchemaModel):
         ),
     )
     font: SlideElementFontInput | None = Field(
-        ...,
+        None,
         description=(
             "Toolbar-style text font patch. For text, text-list, and table "
             "elements, this updates both the element font and existing text runs."
         ),
     )
     alignment: SlideElementAlignmentInput | None = Field(
-        ...,
+        None,
         description="Toolbar-style text alignment patch for text elements.",
     )
     fill: SlideElementFillInput | None = Field(
-        ...,
+        None,
         description="Toolbar-style fill/background patch for elements that support fill.",
     )
     stroke: SlideElementStrokeInput | None = Field(
-        ...,
+        None,
         description="Toolbar-style stroke/border/line patch.",
     )
     color: str | None = Field(
-        ...,
+        None,
         min_length=1,
         max_length=64,
         description=(
@@ -752,17 +753,17 @@ class UpdateSlideElementInput(OpenAIStrictSchemaModel):
         ),
     )
     opacity: float | None = Field(
-        ...,
+        None,
         ge=0,
         le=1,
         description="Toolbar-style element opacity patch.",
     )
     position: SlideElementPositionInput | None = Field(
-        ...,
+        None,
         description="Optional element position update for move requests.",
     )
     size: SlideElementSizeInput | None = Field(
-        ...,
+        None,
         description="Optional element size update for resize/shrink/grow requests.",
     )
 

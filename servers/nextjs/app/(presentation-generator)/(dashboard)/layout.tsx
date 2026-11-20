@@ -9,12 +9,12 @@ const layout = ({ children }: { children: React.ReactNode }) => {
     )
 
     return (
-        <div className='flex pr-4 bg-white'>
+        <div className='flex min-w-0 flex-col bg-white md:flex-row md:pr-4'>
             <DashboardSidebar
                 showCommunity={isCommunityEnabled(process.env.PRESENTON_COMMUNITY_ENABLED)}
                 showTemplates={presentationGenerationMode !== "smart"}
             />
-            <div className='w-full'>
+            <div className='min-w-0 w-full flex-1'>
 
                 {children}
             </div>

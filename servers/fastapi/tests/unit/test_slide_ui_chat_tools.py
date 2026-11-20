@@ -5,6 +5,9 @@ import uuid
 from unittest.mock import AsyncMock, patch
 
 from llmai.shared import AssistantToolCall  # type: ignore[import-not-found]
+from jsonschema import Draft202012Validator
+from services.chat.schemas import UpdateSlideElementInput
+from services.nimi_llm import _schema
 
 from constants.presentation import MAX_NUMBER_OF_SLIDES, MAX_OUTLINE_CONTENT_WORDS
 from models.sql.presentation import PresentationModel, PresentationVersion
@@ -405,16 +408,18 @@ def test_add_slide_component_accepts_source_block_for_table():
 def test_update_slide_element_edits_ui_text():
     slide = _slide()
     tools, session = _tools(slide)
-
-    result = _call(
-        tools,
-        "updateElement",
-        {
-            "index": 0,
-            "elementPath": "components[0].elements[0]",
-            "text": "New title",
-        },
-    )
+    unchanged_component = copy.deepcopy(slide.ui["components"][1])
+    arguments = {
+        "index": 0,
+        "elementPath": "components[0].elements[0]",
+        "text": "New title",
+    }
+    # The same sparse edit accepted by the business handler must also pass the
+    # schema supplied to Nimi, which validates calls before executing tools.
+    assert UpdateSlideElementInput.model_validate(arguments).text == "New title"
+    declaration = next(tool for tool in tools.get_tool_definitions() if tool.name == "updateElement")
+    Draft202012Validator(_schema(declaration.input_schema)).validate(arguments)
+    result = _call(tools, "updateElement", arguments)
 
     assert result["ok"] is True
     assert result["result"]["updated"] is True
@@ -423,6 +428,7 @@ def test_update_slide_element_edits_ui_text():
     # The renderer reads the flattened top-level `text` in preference to `runs`,
     # so it must be kept in sync or the edit is invisible / gets reverted.
     assert element["text"] == "New title"
+    assert slide.ui["components"][1] == unchanged_component
     assert session.commit_count == 1
 
 

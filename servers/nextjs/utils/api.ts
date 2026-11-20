@@ -54,6 +54,7 @@ function getConfiguredFastApiUrl(): string | null {
 }
 
 function getFastApiUrlFromQuery(): string | null {
+  if (process.env.NEXT_PUBLIC_NIMI_WEB_CONFIG) return null;
   if (typeof window === "undefined") return null;
   try {
     const params = new URLSearchParams(window.location.search);

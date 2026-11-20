@@ -5,6 +5,8 @@ profile: standalone
 manifest_role: submitted-input
 app_access:
   - runtime.consume
+  - integration.consume
+  - integration.provide
 capability_contract_refs:
   - text.generate
   - image.generate
@@ -27,6 +29,20 @@ storage_policy:
       purpose: Exported PDF and PPTX presentations
       expected_size_band: Up to hundreds of MB per presentation
 local_development:
+  mobile:
+    command: pnpm run dev:android
+  web:
+    origin: ""
+    redirect_uri: ""
+    client_id: ""
+    realm_environment_id: production
+    realm_url: https://realm.nimi.ai
+    official_web_url: https://nimi.ai
+    command: pnpm run dev:web-renderer
+    local:
+      origin: https://127.0.0.1:4486
+      redirect_uri: https://127.0.0.1:4486/
+      client_id: io.github.nimiplatform.presenton.web.dev
   electron:
     renderer_origin: http://127.0.0.1:6016
     host_source_directory: electron/nimi

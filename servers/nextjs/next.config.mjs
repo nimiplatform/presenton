@@ -6,7 +6,7 @@ const isElectronBuild = process.env.PRESENTON_ELECTRON_BUILD === "true";
 
 const nextConfig = {
   reactStrictMode: false,
-  distDir: process.env.NODE_ENV === "production" ? ".next-production" : ".next-build",
+  distDir: process.env.PRESENTON_WEB === 'true' ? '.next-web' : process.env.NODE_ENV === "production" ? ".next-production" : ".next-build",
   output: "standalone",
   // Text repair, icon indexing and media Jobs outlive Next's 30-second proxy
   // default. Keep the supervised business stream connected with a finite budget.
@@ -37,7 +37,7 @@ const nextConfig = {
     // A packaged Electron app is installed under a read-only directory such as
     // /opt/Presenton. Next's optimizer writes to <distDir>/cache, so emit direct
     // image URLs for that build instead of attempting runtime cache writes.
-    unoptimized: isElectronBuild,
+    unoptimized: isElectronBuild || process.env.PRESENTON_WEB === 'true',
     remotePatterns: [
       {
         protocol: "https",

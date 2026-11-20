@@ -197,6 +197,9 @@ export const usePresentationStreaming = (
     };
 
     const scheduleRetry = (reason: string): boolean => {
+      // A lost Web transfer does not establish whether the PC performed the work.
+      // Inspect the saved draft instead of submitting another generation request.
+      if (process.env.NEXT_PUBLIC_NIMI_WEB_CONFIG) return false;
       if (retryCount >= MAX_STREAM_RETRIES || isClosed) {
         return false;
       }
@@ -685,7 +688,9 @@ export const usePresentationStreaming = (
         if (isClosed) return;
         console.error("EventSource failed:", error);
         if (!scheduleRetry("connection lost")) {
-          finalizeFailure("Failed to connect to the server. Please try again.");
+          finalizeFailure(process.env.NEXT_PUBLIC_NIMI_WEB_CONFIG
+            ? "The PC connection ended. Reopen this presentation to inspect saved progress before retrying. Generation was not automatically restarted."
+            : "Failed to connect to the server. Please try again.");
         }
       };
     };

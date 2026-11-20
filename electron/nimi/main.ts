@@ -10,6 +10,7 @@ catch (error) { process.stderr.write(`[presenton-host-profile] ${String(error)}\
 const { registerNimiElectronAppBridge, registerNimiElectronAppAssetProtocolScheme, isAllowedElectronRendererUrl } = await import('@nimiplatform/kit/shell/electron/main');
 const { PresentonBackend, availablePort, helperEnvironment } = await import('./backend.js');
 const { spawn } = await import('node:child_process');
+const { PresentonWebWorkspace } = await import('./web-workspace.js');
 declare const __NIMI_ELECTRON_PRODUCTION__: boolean;
 const production = __NIMI_ELECTRON_PRODUCTION__;
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -29,6 +30,8 @@ const backend = new PresentonBackend({ appRoot: businessRoot, storageRoot: path.
 let bridge: ReturnType<typeof registerNimiElectronAppBridge> | undefined;
 let nextProcess: ReturnType<typeof spawn> | undefined;
 let quitting = false;
+let reconnecting = false;
+let webWorkspace: InstanceType<typeof PresentonWebWorkspace> | undefined;
 
 app.setName('Presenton — Nimi');
 app.setAppUserModelId('ai.nimi.apps.io.github.nimiplatform.presenton');
@@ -69,13 +72,23 @@ bridge = registerNimiElectronAppBridge({
   assetMediaPlatform: { protocol, webRequest: session.defaultSession.webRequest, webContents },
   appCommandHandlers: {
     'presenton.backend.status': async () => backend.state,
-    'presenton.backend.retry': async () => { if (bridge) await backend.start(bridge.services); return backend.state; },
+    'presenton.web.status': async () => webWorkspace?.status ?? { registered:false, error:'Waiting for the PC App session.' },
+    'presenton.backend.retry': async () => {
+      if (bridge) { await bridge.prepareSession(); await backend.start(bridge.services); }
+      return backend.state;
+    },
   },
-  onSessionReady: (services) => { void backend.start(services); },
+  onSessionReady: (services) => {
+    webWorkspace?.stop();
+    webWorkspace = new PresentonWebWorkspace(services, () => ({ ready:backend.state.ready, key:backend.key, origin }));
+    void backend.start(services);
+  },
   onSessionInvalidated: () => {
+    webWorkspace?.stop();webWorkspace=undefined;
     backend.stop();
+    reconnecting = true;
     for (const window of BrowserWindow.getAllWindows()) window.destroy();
-    if (!quitting) void createWindow();
+    if (!quitting) void createWindow().finally(() => { reconnecting = false; });
   },
 });
 session.defaultSession.webRequest.onBeforeSendHeaders({ urls: [origin + '/*'] }, (details, callback) => {
@@ -93,5 +106,5 @@ await createWindow();
   app.exit(1);
 });
 app.on('activate', () => { if (BrowserWindow.getAllWindows().length === 0) void createWindow(); });
-app.on('before-quit', () => { quitting = true; backend.stop(); bridge?.unregister(); nextProcess?.kill(); });
-app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(); });
+app.on('before-quit', () => { quitting = true; webWorkspace?.stop(); backend.stop(); bridge?.unregister(); nextProcess?.kill(); });
+app.on('window-all-closed', () => { if (process.platform !== 'darwin' && !reconnecting) app.quit(); });

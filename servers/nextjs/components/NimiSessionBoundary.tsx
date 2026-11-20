@@ -4,7 +4,20 @@ import { usePathname } from 'next/navigation';
 import { invokeShell } from '@nimiplatform/kit/shell/renderer/bridge';
 import { Button } from '@/components/ui/button';
 import { getNimiClient } from '@/lib/nimi-client';
+import WebNimiSessionBoundary from './WebNimiSessionBoundary';
+import MobileNimiSessionBoundary from './MobileNimiSessionBoundary';
+import { Capacitor } from '@capacitor/core';
 export default function NimiSessionBoundary({ children }: { children: ReactNode }) {
+  if (process.env.NEXT_PUBLIC_NIMI_WEB_CONFIG) return <RemoteBoundary>{children}</RemoteBoundary>;
+  return <NativeBoundary>{children}</NativeBoundary>;
+}
+function RemoteBoundary({ children }: { children: ReactNode }) {
+  const [mobile, setMobile] = useState<boolean>();
+  useEffect(() => { setMobile(window !== parent || (Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'android')); }, []);
+  if (mobile === undefined) return <p className="p-6">Opening Presenton…</p>;
+  return mobile ? <MobileNimiSessionBoundary>{children}</MobileNimiSessionBoundary> : <WebNimiSessionBoundary>{children}</WebNimiSessionBoundary>;
+}
+function NativeBoundary({ children }: { children: ReactNode }) {
   const path = usePathname(); const exporting = path === '/pdf-maker';
   const [ready, setReady] = useState(false);
   const [message, setMessage] = useState('Connecting to Nimi…');

@@ -55,6 +55,7 @@ import { KeyboardShortcutsDialog } from "./KeyboardShortcutsDialog";
 import { sanitizeAnalyticsError } from "@/utils/analytics";
 import { v4 as uuidv4 } from "uuid";
 import StreamingGenerationMetrics from "./StreamingGenerationMetrics";
+import { isMobileWorkspace, saveMobilePresentation } from '@/lib/mobile-workspace-client';
 
 const MAX_EXPORT_TITLE_LENGTH = 40;
 
@@ -268,7 +269,7 @@ const PresentationHeader = ({
           throw new Error("No path returned from export");
         }
 
-        downloadLink(pptxPath, safePptxFileName);
+        await downloadLink(pptxPath, safePptxFileName);
       }
       await trackExportLifecycle(
         MixpanelEvent.Presentation_Export_Completed,
@@ -279,7 +280,7 @@ const PresentationHeader = ({
       );
       notify.success(
         "Export complete",
-        "Your PPTX file has been downloaded.",
+        isMobileWorkspace() ? "Your PPTX was saved to the location you selected." : "Your PPTX is ready. The browser download has started.",
         { id: exportToastId }
       );
     } catch (error) {
@@ -346,7 +347,7 @@ const PresentationHeader = ({
           if (!pdfPath) {
             throw new Error("No path returned from export");
           }
-          downloadLink(pdfPath, safePdfFileName);
+          await downloadLink(pdfPath, safePdfFileName);
         } else {
           throw new Error("Failed to export PDF");
         }
@@ -360,7 +361,7 @@ const PresentationHeader = ({
       );
       notify.success(
         "Export complete",
-        "Your PDF file has been downloaded.",
+        isMobileWorkspace() ? "Your PDF was saved to the location you selected." : "Your PDF is ready. The browser download has started.",
         { id: exportToastId }
       );
     } catch (error) {
@@ -406,14 +407,21 @@ const PresentationHeader = ({
       }`
     );
   };
-  const downloadLink = (path: string, fileName: string) => {
+  const downloadLink = async (path: string, fileName: string) => {
+    if (isMobileWorkspace()) { await saveMobilePresentation(path, fileName); return; }
+    const response = await fetch(path);
+    if (!response.ok) throw new Error('The exported file could not be transferred from the PC.');
+    const blob = await response.blob();
+    if (!blob.size) throw new Error('The exported file is empty.');
+    const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
-    link.href = path;
+    link.href = url;
     link.download = fileName;
     link.rel = "noopener";
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    setTimeout(() => URL.revokeObjectURL(url), 60_000);
   };
 
   const trackExportLifecycle = async (
@@ -487,12 +495,12 @@ const PresentationHeader = ({
   const titleBlock = (
     <div
       className={cn(
-        "min-w-0 max-w-[min(640px,calc(100vw-12rem))] flex-1 transition-[box-shadow] duration-200",
+        "min-w-0 max-w-full sm:max-w-[min(640px,calc(100vw-12rem))] flex-1 transition-[box-shadow] duration-200",
         isEditingTitle && "relative z-[60]"
       )}
     >
       {isEditingTitle ? (
-        <div className="flex items-stretch w-[450px]  gap-0.5 rounded-[14px] border border-[#E4E2EB] bg-white pl-3.5 pr-1 py-1 shadow-[0_2px_12px_rgba(17,3,31,0.06)] ring-2 ring-[#5141e5]/15">
+        <div className="flex w-full max-w-full items-stretch gap-0.5 rounded-[14px] border border-[#E4E2EB] bg-white pl-3.5 pr-1 py-1 shadow-[0_2px_12px_rgba(17,3,31,0.06)] ring-2 ring-[#5141e5]/15 sm:w-[450px]">
           <input
             ref={titleInputRef}
             value={draftTitle}
@@ -549,7 +557,7 @@ const PresentationHeader = ({
             "disabled:pointer-events-none disabled:opacity-100 disabled:hover:bg-transparent"
           )}
         >
-          <h2 className="min-w-0 flex-1 font-syne text-lg w-[450px] leading-snug text-[#101323]">
+          <h2 className="min-w-0 w-full flex-1 font-syne text-lg leading-snug text-[#101323] sm:w-[450px]">
             <MarkdownRenderer
               content={presentationData?.title || "Presentation"}
               className="mb-0 min-w-0 overflow-hidden text-ellipsis line-clamp-1 text-sm text-[#101323] prose-p:my-0 prose-headings:my-0"
@@ -568,16 +576,13 @@ const PresentationHeader = ({
 
   return (
     <>
-      <div className="py-[18px] px-4 sticky top-0 bg-white z-50 shadow-sm font-syne flex justify-between items-center gap-4">
+      <div className="sticky top-0 z-50 flex flex-col items-stretch justify-between gap-2 bg-white px-4 py-3 font-syne shadow-sm sm:flex-row sm:items-center sm:gap-4 sm:py-[18px]">
         <div className="flex min-w-0 flex-1 items-center gap-3">
-          <img
-            onClick={() => {
-              router.push("/dashboard");
-            }}
+          <button type="button" aria-label="Back to presentations" className="flex h-11 w-11 shrink-0 items-center justify-center" onClick={() => router.push('/dashboard')}><img
             src="/logo-with-bg.png"
             alt=""
-            className="w-10 h-10 cursor-pointer object-contain"
-          />
+            className="h-10 w-10 object-contain"
+          /></button>
           {presentationData && !isStreaming && !isEditingTitle ? (
             <ToolTip content="Rename presentation">{titleBlock}</ToolTip>
           ) : (
@@ -586,7 +591,7 @@ const PresentationHeader = ({
          
         </div>
 
-        <div className="flex shrink-0 items-center gap-2.5">
+        <div className="flex shrink-0 flex-wrap items-center justify-end gap-2 sm:gap-2.5">
           {generationMode === "smart" && generationMetrics ? (
             <StreamingGenerationMetrics metrics={generationMetrics} />
           ) : null}
@@ -637,12 +642,13 @@ const PresentationHeader = ({
               </button>
             </ToolTip>
           )}
-          <div className="flex items-center gap-2 bg-[#F6F6F9] px-3.5 h-[38px] border border-[#EDECEC] rounded-[80px]">
+          <div className="flex h-[38px] items-center gap-1 rounded-[80px] border border-[#EDECEC] bg-[#F6F6F9] px-1.5">
             <ToolTip content="Regenerate Presentation">
               <button
                 type="button"
+                aria-label="Regenerate presentation"
                 onClick={() => setIsRegenerateConfirmOpen(true)}
-                className="group"
+                className="group flex h-9 w-8 items-center justify-center"
               >
                 <RotateCcw className="w-3.5 h-3.5 text-[#101323] group-hover:text-[#5141e5] duration-300" />
               </button>
@@ -651,7 +657,8 @@ const PresentationHeader = ({
             <ToolTip content="Undo">
               <button
                 disabled={!canUndo}
-                className=" disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer group"
+                aria-label="Undo"
+                className="group flex h-9 w-8 cursor-pointer items-center justify-center disabled:cursor-not-allowed disabled:opacity-50"
                 onClick={() => {
                   onUndo();
                 }}
@@ -663,7 +670,8 @@ const PresentationHeader = ({
             <ToolTip content="Redo">
               <button
                 disabled={!canRedo}
-                className=" disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer group"
+                aria-label="Redo"
+                className="group flex h-9 w-8 cursor-pointer items-center justify-center disabled:cursor-not-allowed disabled:opacity-50"
                 onClick={() => {
                   onRedo();
                 }}
@@ -674,6 +682,7 @@ const PresentationHeader = ({
             <Separator orientation="vertical" className="h-4 w-[2px]" />
             <ToolTip content="Present">
               <button
+                aria-label="Present slides"
                 onClick={() => {
                   const to = `?id=${presentation_id}&mode=present&slide=${
                     currentSlide || 0
@@ -693,7 +702,7 @@ const PresentationHeader = ({
                   !presentationData?.slides ||
                   presentationData?.slides.length === 0
                 }
-                className="cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed group"
+                className="group flex h-9 w-8 cursor-pointer items-center justify-center disabled:cursor-not-allowed disabled:opacity-50"
               >
                 <Play className="w-3.5 h-3.5 text-[#101323] group-hover:text-[#5141e5] duration-300" />
               </button>

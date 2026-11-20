@@ -14,6 +14,7 @@ import {
 } from "@/lib/chart-browser";
 import { TAILWIND_BROWSER_SCRIPT_URL } from "@/lib/tailwind-browser";
 import { useSmartChartInjection } from "./useSmartChartInjection";
+import { inlineWebSlideAssets } from '@/lib/web-slide-assets';
 
 const SLIDE_WIDTH = 1280;
 const SLIDE_HEIGHT = 720;
@@ -171,6 +172,15 @@ function IframeSmartHtmlSlide({
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [width, setWidth] = useState(0);
   const srcDoc = useMemo(() => previewDocument(html, fonts), [fonts, html]);
+  const [webDocument, setWebDocument] = useState({ source: '', html: '', error: '' });
+  useEffect(() => {
+    if (!process.env.NEXT_PUBLIC_NIMI_WEB_CONFIG) return;
+    const control = new AbortController();
+    void inlineWebSlideAssets(srcDoc, window.location.origin, control.signal)
+      .then(html => { if (!control.signal.aborted) setWebDocument({ source:srcDoc, html, error:'' }); })
+      .catch(error => { if (!control.signal.aborted) setWebDocument({ source:srcDoc, html:'', error:String(error.message || error) }); });
+    return () => control.abort();
+  }, [srcDoc]);
 
   useEffect(() => {
     if (fixedSize) return;
@@ -204,13 +214,13 @@ function IframeSmartHtmlSlide({
           opacity: scale ? 1 : 0,
         }}
       >
-        <iframe
+        {process.env.NEXT_PUBLIC_NIMI_WEB_CONFIG && webDocument.source === srcDoc && webDocument.error ? <p role="alert" className="p-6 text-base">{webDocument.error}</p> : <iframe
           className="block h-[720px] w-[1280px] border-0 bg-white"
           sandbox="allow-scripts"
-          srcDoc={srcDoc}
+          srcDoc={process.env.NEXT_PUBLIC_NIMI_WEB_CONFIG ? (webDocument.source === srcDoc ? webDocument.html : previewDocument('<p>Loading slide assets…</p>', undefined)) : srcDoc}
           tabIndex={-1}
           title={title}
-        />
+        />}
       </div>
     </div>
   );

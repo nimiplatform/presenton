@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Presenton（本地测试）</string>
+    <string name="title_activity_main">Presenton（本地测试）</string>
+    <string name="package_name">ai.nimi.apps.presenton.dev</string>
+    <string name="custom_url_scheme">ai.nimi.apps.presenton.dev</string>
+</resources>

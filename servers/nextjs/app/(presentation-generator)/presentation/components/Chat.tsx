@@ -28,6 +28,7 @@ import React, {
   useState,
 } from "react";
 import Image from "next/image";
+import { readMobileDraft, writeMobileDraft } from '@/lib/mobile-workspace-client';
 import { notify } from "@/components/ui/sonner";
 import { useDispatch, useSelector } from "react-redux";
 import MarkdownRenderer from "@/components/MarkDownRender";
@@ -509,7 +510,10 @@ const Chat = ({
   const chatHtmlSelection = useSelector(
     (state: RootState) => state.presentationGeneration.chatHtmlSelection,
   );
-  const [input, setInput] = useState("");
+  const mobileDraftKey = `chat:${conversationStorageScope}:${resourceId ?? presentationId}`;
+  const lastDraftKey = useRef(mobileDraftKey);
+  const readDraft = () => readMobileDraft<{ input: string; images: PastedChatImage[]; documents: ChatDocumentAttachment[]; links: ChatLink[] }>(mobileDraftKey);
+  const [input, setInput] = useState(() => readDraft()?.input ?? "");
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [conversations, setConversations] = useState<
@@ -527,11 +531,11 @@ const Chat = ({
     string | null
   >(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [pastedImages, setPastedImages] = useState<PastedChatImage[]>([]);
+  const [pastedImages, setPastedImages] = useState<PastedChatImage[]>(() => readDraft()?.images ?? []);
   const [attachedDocuments, setAttachedDocuments] = useState<
     ChatDocumentAttachment[]
-  >([]);
-  const [chatLinks, setChatLinks] = useState<ChatLink[]>([]);
+  >(() => readDraft()?.documents ?? []);
+  const [chatLinks, setChatLinks] = useState<ChatLink[]>(() => readDraft()?.links ?? []);
   const [isUploadingPastedImage, setIsUploadingPastedImage] = useState(false);
   const [isDraggingAttachment, setIsDraggingAttachment] = useState(false);
   const [isQuickPromptsOpen, setIsQuickPromptsOpen] = useState(false);
@@ -600,7 +604,8 @@ const Chat = ({
     abortControllerRef.current?.abort();
     abortControllerRef.current = null;
     setMessages([]);
-    setInput("");
+    const retainedDraft = readDraft();
+    setInput(retainedDraft?.input ?? "");
     setConversationId(null);
     setConversations([]);
     setIsConversationListOpen(false);
@@ -609,9 +614,9 @@ const Chat = ({
     setHasChatMutationStarted(false);
     setActiveAssistantMessageId(null);
     setErrorMessage(null);
-    setPastedImages([]);
-    setAttachedDocuments([]);
-    setChatLinks([]);
+    setPastedImages(retainedDraft?.images ?? []);
+    setAttachedDocuments(retainedDraft?.documents ?? []);
+    setChatLinks(retainedDraft?.links ?? []);
     setIsUploadingPastedImage(false);
     setIsDraggingAttachment(false);
     setIsQuickPromptsOpen(false);
@@ -786,6 +791,11 @@ const Chat = ({
     presentationType,
     variant,
   ]);
+
+  useEffect(() => {
+    if (lastDraftKey.current !== mobileDraftKey) { lastDraftKey.current = mobileDraftKey; return; }
+    writeMobileDraft(mobileDraftKey, { input, images: pastedImages, documents: attachedDocuments, links: chatLinks });
+  }, [mobileDraftKey, input, pastedImages, attachedDocuments, chatLinks]);
 
   useEffect(() => {
     const activePreview = activeEditPreviewRef.current;
@@ -2612,6 +2622,7 @@ const Chat = ({
               ref={inputRef}
               name="chat-input"
               id="chat-input"
+              aria-label="Message to Presenton AI"
               className="h-[79px] min-h-[79px] w-full resize-none overflow-x-hidden bg-transparent font-syne text-sm font-normal leading-[normal] text-[#191919] placeholder:text-[#999999] focus:outline-none focus:ring-0 [overflow-wrap:anywhere] [word-break:break-word]"
               rows={3}
               wrap="soft"
@@ -3185,6 +3196,7 @@ const Chat = ({
           ref={inputRef}
           name="chat-input"
           id="chat-input"
+          aria-label="Message to Presenton AI"
           className={cn(
             "w-full resize-none overflow-x-hidden bg-transparent text-sm text-[#101828] placeholder:text-[#99A1AF] focus:outline-none focus:ring-0 [overflow-wrap:anywhere] [word-break:break-word]",
             showEditorEmptyState ? "min-h-[57px]" : "min-h-[92px]",

@@ -79,6 +79,7 @@ export const useOutlineStreaming = (
     };
 
     const scheduleRetry = (reason: string): boolean => {
+      if (process.env.NEXT_PUBLIC_NIMI_WEB_CONFIG) return false;
       if (retryCount >= MAX_STREAM_RETRIES || isClosed) {
         return false;
       }
@@ -263,10 +264,12 @@ export const useOutlineStreaming = (
         if (isClosed) return;
         if (!scheduleRetry("connection lost")) {
           isClosed = true;
-          dispatch(setOutlines([]));
+          if (!process.env.NEXT_PUBLIC_NIMI_WEB_CONFIG) dispatch(setOutlines([]));
           resetStreamingState();
           closeEventSource();
-          setError("The outline connection failed. Please try again.");
+          setError(process.env.NEXT_PUBLIC_NIMI_WEB_CONFIG
+            ? "The PC connection ended. Reopen the original outline to inspect saved progress before retrying. Generation was not automatically restarted."
+            : "The outline connection failed. Please try again.");
           notify.error(
             "Connection failed",
             "Failed to connect to the server. Please try again."
