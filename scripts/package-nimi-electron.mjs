@@ -120,7 +120,7 @@ try {
   await installProductionDependencies(productionSourceRoot);
   const businessRoot = path.join(stagingRoot, 'presenton');
   await mkdir(path.join(businessRoot, 'servers/nextjs/.next-production'), { recursive: true });
-  for (const directory of ['assets', 'static', 'alembic']) await cp(path.join(appRoot, 'servers/fastapi', directory), path.join(businessRoot, 'servers/fastapi', directory), { recursive: true, dereference: true });
+  for (const directory of ['assets', 'static', 'alembic', 'templates/assets']) await cp(path.join(appRoot, 'servers/fastapi', directory), path.join(businessRoot, 'servers/fastapi', directory), { recursive: true, dereference: true });
   for (const directory of ['templates', 'presentation-export']) await cp(path.join(appRoot, directory), path.join(businessRoot, directory), { recursive: true, dereference: true, filter: productionResource });
   await cp(path.join(productionSourceRoot, 'node_modules'), path.join(businessRoot, 'node_modules'), { recursive: true, dereference: true, filter: productionResource });
   await cp(path.join(appRoot, 'servers/fastapi/scripts'), path.join(businessRoot, 'servers/fastapi/scripts'), { recursive: true, dereference: true });

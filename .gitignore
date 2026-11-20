@@ -37,8 +37,10 @@ servers/fastapi/*.egg-info/
 pptxcollection/
 .nimi/local/
 dist-electron
+dist-electron-package
 dist-web/
 dist-electron
+dist-electron-package
 dist-web-package/
 dist/nimi-app/
 !/.agents/
