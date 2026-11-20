@@ -1,4 +1,38 @@
-Current development dependencies are SDK **0.24.0-rc.2**, Kit **0.24.0-rc.4** (Android coordination fix) / native **0.24.0-rc.1**, App Tools **0.16.0-rc.2**, Nimi Coding **0.7.0**, and Electron **45**. The frozen workspace overrides consume the complete four-package `integration-20261114-android-http-rc.4` archive copied into `.nimi/local/integration-20261114-android-http-rc.4/`; the original frozen `integration-20261113-rc.2` archives remain intact; these are local development inputs, not public-registry release evidence. Use Node 24.22.3, `pnpm install --frozen-lockfile`, `pnpm exec nimi-app check`, and the existing `pnpm dev -- --resume <current-selector>` with a matching source-built Nimi. App versions and published App releases are unchanged. Home uses the App-owned `NIMI_APP.md`.
+## Upstream refresh, published Nimi pre cohort & static Hosted Web candidate — 2026-11-21
+
+Candidate **0.9.12-beta.1** merges upstream `presenton/presenton` `main` through commit `95964559dda6ffba5eab14e2b2db09b2c24a657a` (`150` upstream commits since `f9d3eba1a25712e25766b35a7af3b25f93ec1c01`, verified with `git merge-base --is-ancestor 95964559dda6ffba5eab14e2b2db09b2c24a657a HEAD`), upgrades all Nimi packages to the published npm `pre` cohort without local tarball overrides, and adds a static-hostable Web candidate for `https://presenton.nimi.xyz` (`public_slug: presenton`).
+
+### Dependencies & lockfile
+
+- Published npm packages: `@nimiplatform/app-tools` `^0.16.0-rc.10`, `@nimiplatform/sdk` `^0.24.0-rc.10`, `@nimiplatform/kit` `^0.24.0-rc.16` (with optional native `@nimiplatform/kit-protected-local-win32-x64` `0.24.0-rc.16`), `@nimiplatform/nimi-coding` `0.7.0`, `electron` `^45.4.1`, `vite` `^8.3.8`, `@vitejs/plugin-react` `^6.2.1`.
+- Upstream runtime & security updates retained: Next.js `16.4.6`, `@tiptap/*` `3.30.5`, `sharp` `^0.35.5`, `@presenton/export-core` `v1.0.51`, `katex` `^0.18.2`, `follow-redirects` `^1.16.2`, `minimatch` `^11.0.3` (`11.0.8` resolved), `glob` `^14.0.3` (`14.0.6` resolved), `postcss-selector-parser` `6.1.5`, `systeminformation` `>=5.33.16`, plus relocated packaged font catalog `templates/assets/fonts.json` bundled into PyInstaller `nimi-worker.spec` and Windows resources.
+- All `file:.nimi/local/...` overrides are removed from `pnpm-workspace.yaml`; `pnpm-lock.yaml` resolves exclusively against the public npm registry.
+
+### Retained Nimi fork boundaries
+
+- AI execution (`text.generate`, `image.generate`, `text.embed`) routes exclusively through the supervised Electron Host's SDK/Kit session (`electron/nimi/ai.ts` ↔ `servers/fastapi/services/nimi_channel.py`). Upstream local password/admin auth bootstrap, API/MCP key issuance, Presenton Cloud AI OAuth, ComfyUI/OpenAI/Gemini direct image SDKs, and browser-writable provider secrets remain disabled on user-facing paths (`POST /api/v1/ppt/images/test` is also blocked on remote Web alongside non-GET settings routes).
+- Static Hosted Web (`vite.web.config.mjs`, `web/`, `build:web`, `build:web:release`, `.github/workflows/nimi-web-release.yml`) compiles the existing React presentation editor into an immutable `_releases/<version>/` asset layout with `nimi-web-bundle.json` and zero inline `<script>` tags (compatible with Nimi Hosted Web CSP `script-src 'self' 'wasm-unsafe-eval'`). `servers/nextjs/lib/web-workspace.ts` now provides an in-page workspace interceptor for business `fetch`, SSE `EventSource`, and `HTMLImageElement` `/app_data/*` + `/static/*` blob URLs over `io.github.nimiplatform.presenton.workspace.v1`, removing the root Service Worker requirement.
+- **PC version compatibility**: Published Catalog `0.9.11-beta.10` declares only `app_access: ["runtime.consume"]` and predates `PresentonWebWorkspace` (`io.github.nimiplatform.presenton.workspace.v1`). Browser access requires updating PC Presenton to **`0.9.12-beta.1` or newer** on a Nimi Desktop/Runtime supporting Integration.
+
+### Command & artifact verification
+
+- `pnpm exec nimi-app sync` + `pnpm exec nimicoding sync --check` (`in_sync: 2`) + `pnpm exec nimi-app check --production`: passed.
+- `pnpm test`: Host/Next TypeScript checks, **54 repository tests** (4 POSIX permission skips, including `hosted-web-bundle.test.mjs` standalone static server & CSP check), **1,436 Python tests** (7 skips), and **163 renderer tests** (2 symlink skips) passed.
+- Windows production build & package (`pnpm exec nimi-app build --target windows-x86_64 --production` and `pnpm exec nimi-app pack --target windows-x86_64 --production`): produced `dist/nimi-app/io.github.nimiplatform.presenton-0.9.12-beta.1-windows-x86_64.nimiapp` (`1,875,318,713` bytes, SHA-256 `2384667dc47f84788f1b2a9ee6af2f9ac05d79224272e8704b86ab8b206c5f18`), with `_internal/templates/assets/fonts.json` verified inside `presenton-worker` and isolated standalone Next HTML probe passing.
+- Static Hosted Web release archive (`NIMI_WEB_VERSION=0.9.12 NIMI_WEB_ARCHIVE=.nimi/local/nimi-web-0.9.12.zip pnpm run build:web:release`): produced `.nimi/local/nimi-web-0.9.12.zip` (`103,234,484` bytes, `503` entries, SHA-256 `a6b264201f9d320aaa603307c9db5f60c455b5bda07c973ecbcdf3b2ba7a678d`), passing `nimi-app-registry/scripts/hosted-release-verification.mjs` `verifyHostedBundle`.
+
+### Real Windows PC + Static Web acceptance (2026-11-21)
+
+- Resumed the existing Desktop-supervised registration (`dev-project-IFrtvBWc2jw5OFZHXlIriPSR`) with retained 4-draft workspace and configured Nimi AI models (`Gemma 4 26B Q4 text-only v2`, `MiniMax-H3-Image`, `EmbeddingGemma 2 text retrieval`).
+- Verified upstream built-in template cloning (`POST /api/v1/ppt/template/swift/clone` → `201` with 9 layouts, `DELETE` → `204`) and the new two-stage template-first `/outline` workflow.
+- On fictional topic *Solstice Harbor 7: Fictional Floating Tidal Observatory 2094 Trial Report* (`82d47fb4-4ba1-474d-b8ff-0312687aaf2d`), `Auto slides` generated 8 outlines; an 8-slide `Swift` attempt hit `Gemma 4 26B Q4` structured-output exhaustion and cleanly surfaced the non-retryable terminal alert without looping. Trimming to **3 slides** on the **`Standard`** template completed real slide + chart + `MiniMax-H3-Image` generation (`left_chart_right_title_description_5880`, `left_image_right_details_2189`, `left_image_right_title_strategy_cards_6875`).
+- Edited presentation title to **Solstice Harbor 7 — Verified Revision** and Slide 1 heading to **Solstice 7 Revised** on PC, reloaded to confirm persistence, and exported PC `.pptx` (`4,882,567` bytes, 3 slides) and `.pdf` (`4,472,110` bytes, 3 pages) in `.nimi/local/acceptance-20261121/`.
+- Served the built static Web bundle (`dist-web/`) at `https://127.0.0.1:4486/` with Hosted Web CSP and bounded coordination only. Completed Nimi Web login (`@halliday`), connected to `My PC` via `io.github.nimiplatform.presenton.workspace.v1`, read back **Solstice Harbor 7 — Verified Revision** and all 3 slides (**Solstice 7 Revised**, **Reef Telemetry**, **Current Analysis**) with rendered chart and generated images, reloaded and reconnected without re-triggering AI generation (zero CSP/console errors), and exported Web `.pptx` (`4,882,566` bytes, 3 slides, `11` embedded media items) and `.pdf` (`4,472,110` bytes, 3 × `960×540` pages, rendered to PNG and visually inspected).
+- **NOT-VERIFIED**: Production GitHub Release tags (`v0.9.12-beta.1`, `web-v0.9.12`) and repository admin token settings, Registry PR admission and live `https://presenton.nimi.xyz` CDN deployment, Catalog installation of the packaged `.nimiapp` on non-dev production Runtime, Smart HTML sandbox generation on this model cohort, and macOS `arm64` packaging on this Windows host.
+
+---
+
+Earlier development record (2026-11-14): SDK **0.24.0-rc.2**, Kit **0.24.0-rc.4** (Android coordination fix) / native **0.24.0-rc.1**, App Tools **0.16.0-rc.2**, Nimi Coding **0.7.0**, and Electron **45**.
 
 ## Web workspace development — 2026-11-14
 
