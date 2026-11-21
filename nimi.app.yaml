@@ -55,6 +55,87 @@ metadata:
   author: Presenton contributors; Nimi adaptation contributors
   homepage_url: https://github.com/nimiplatform/presenton
   support_url: https://github.com/nimiplatform/presenton/issues
+  storefront:
+    category: design-diagrams
+    default_locale: en
+    locales:
+      en:
+        tags:
+          - Presentations
+          - Slide Editor
+          - Templates
+          - AI Artwork & Charts
+          - PDF & PPTX Export
+        highlights:
+          - title: Topic & Document to Outline
+            description: Start from a brief or source documents, review and reorder the slide-by-slide outline, then generate slides with your chosen template.
+          - title: Templates & Visual Slide Editor
+            description: Choose built-in or cloned custom templates and refine text, charts, tables, icons, and generated images directly on the slide canvas.
+          - title: Nimi-Managed Local & Cloud AI
+            description: Configure text, image generation, and embedding models in Nimi Settings across on-device or cloud routes without separate API keys.
+          - title: Local Workspace & PDF/PPTX Export
+            description: Drafts, templates, and assets stay in your PC workspace, with direct export to shareable PDF and editable PowerPoint files.
+      zh:
+        display_name: Presenton
+        summary: 用 Nimi AI 与 Presenton 模板及幻灯片编辑器创建、审阅大纲、精细编辑并导出 PDF 与 PPTX 演示文稿。
+        introduction: NIMI_APP.zh.md
+        tags:
+          - 演示文稿
+          - 幻灯片编辑
+          - 内置模板
+          - AI 配图与图表
+          - PDF / PPTX 导出
+        highlights:
+          - title: 主题与文档直出大纲
+            description: 输入主题或上传参考文档，先审阅、重排并修改逐页大纲，再按所选模板生成完整幻灯片。
+          - title: 丰富模板与自由精修
+            description: 内置多风格版式模板并支持克隆或自建模板，可在画布中直接编辑文案、图表、表格、图标与配图。
+          - title: Nimi 统一托管本地与云端模型
+            description: 在 Nimi 设置中统一配置写作编辑、配图生成与检索模型，灵活切换本机或云端路线，无需单独管理密钥。
+          - title: 本地工作区与 PDF / PPTX 导出
+            description: 草稿、模板与素材均保存在主 PC 的独立工作区中，完成后可直接导出可分享的 PDF 或可编辑 PPTX 文件。
+    media:
+      cover:
+        path: assets/storefront/cover-en.webp
+        locales:
+          zh: assets/storefront/cover-zh.webp
+      gallery:
+        - id: slide-editor
+          kind: image
+          path: assets/storefront/editor-artwork-en.webp
+          locales:
+            zh: assets/storefront/editor-artwork-zh.webp
+          caption:
+            en: "Interactive slide editor with AI-generated artwork, structured layout cards, filmstrip navigation, and slide editing tools"
+            zh: 交互式幻灯片编辑器：支持 AI 生成配图、结构化卡片版式、左侧缩略图切换与右侧完整编辑工具栏
+        - id: charts-export
+          kind: image
+          path: assets/storefront/charts-export-en.webp
+          locales:
+            zh: assets/storefront/charts-export-zh.webp
+          caption:
+            en: "Live data charts paired with direct one-click export to shareable PDF and editable PowerPoint (PPTX)"
+            zh: 内置数据图表与一键导出入口，可将完成的演示文稿导出为 PDF 或可编辑 PowerPoint（PPTX）
+        - id: outline-review
+          kind: image
+          path: assets/storefront/outline-en.webp
+          locales:
+            zh: assets/storefront/outline-zh.webp
+          caption:
+            en: "Review, reorder, and refine the AI-generated slide outline with the built-in Outline AI assistant before generating slides"
+            zh: 逐页审阅、拖拽重排并借助右侧 AI 大纲助手润色结构，确认后再生成最终幻灯片
+        - id: templates
+          kind: image
+          path: assets/storefront/templates.webp
+          caption:
+            en: "Built-in template gallery with multi-layout themes plus cloning and custom template creation"
+            zh: 内置多风格模板库，提供丰富版式组合，并支持克隆内置模板或创建自定义模板
+        - id: dashboard
+          kind: image
+          path: assets/storefront/dashboard.webp
+          caption:
+            en: "Local PC presentation library for managing saved decks, starting from AI briefs, or creating blank slides"
+            zh: 本机 PC 演示文稿工作区：集中管理已保存草稿，随时从 AI 简介或空白画布新建演示文稿
 safety_profile:
   intended_audience: general
   content_descriptors:

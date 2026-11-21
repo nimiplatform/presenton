@@ -1,3 +1,10 @@
+# 0.9.12-beta.1 — Upstream Presenton refresh, bilingual storefront & PC workspace provider
+
+- Syncs upstream Presenton (`presenton/presenton` `main` through `95964559`), bringing the two-stage template-first outline workflow, built-in template cloning into editable custom templates, refined editor motion/settings dialogs, and updated Next.js/export runtime dependencies.
+- Upgrades Nimi platform packages to the published `pre` cohort (`@nimiplatform/app-tools` `0.16.0-rc.12`, `@nimiplatform/sdk` `^0.24.0-rc.10`, `@nimiplatform/kit` `^0.24.0-rc.16`, `electron` `^45.4.1`) with zero local tarball overrides.
+- Adds the PC workspace Integration provider (`io.github.nimiplatform.presenton.workspace.v1`) so future admitted remote Web or mobile clients can access the PC presentation library, editing, and PDF/PPTX export with explicit Home permission grants. (Hosted Web is not published in this native release.)
+- Adds bilingual (`en` / `zh`) storefront metadata, highlights, localized user introductions (`NIMI_APP.md` / `NIMI_APP.zh.md`), and real product screenshots for Nimi Home and `nimi.ai`.
+
 # 0.9.11-beta.10 — Preserve the selected slide language
 
 The prepare endpoint previously cleared the selected language before final

@@ -1,40 +1,37 @@
 # Presenton
 
-Create presentations from a topic or your source material, review the outline, edit slides and export your work as PDF or PowerPoint.
+Create presentations from a topic or your source documents, select a template, review the outline, edit slides visually, and export finished decks as PDF or PowerPoint (PPTX).
 
-## Create your first presentation
+## Getting started
 
-1. Open Presenton from Nimi Home and keep Nimi running. Browser access also requires Presenton (`0.9.12-beta.1` or newer) to stay open on that PC.
-2. In **Settings → AI models**, configure text generation. Generated artwork needs an image model; icon and document search also use embeddings.
-3. Choose the presentation workflow, provide your topic or material, select a template and review the proposed outline before generating slides.
-4. Edit text, charts, images and layout, then export the finished presentation as PDF or PPTX.
+1. Open Presenton from Nimi Home on your PC (macOS Apple Silicon or Windows x64) and keep Nimi running.
+2. Open **Settings → AI models** to configure **Writing and editing** (text generation). Configure **Generated images** for AI slide artwork and **Icon and document search** (embeddings) for icon lookup and document retrieval.
+3. Click **Create new Presentation**, choose **Standard** (template-guided) or **Smart** mode, enter a topic brief or attach source documents, select a template, and review or edit the proposed outline before generating slides.
+4. Refine text, charts, tables, icons, images, and slide layouts in the editor, then use **Export** to save as PDF or PPTX.
 
-AI drafts can contain inaccurate facts and text that does not fit the layout. Check both content and exported pages before sharing. A model must support the requested structured output, tools or image inputs; if a smaller on-device model fails complex multi-slide template constraints, reduce the slide count, choose a simpler template such as Standard, or select a stronger text model in Settings.
+## Models and practical limits
 
-## Data and services
+- **Model capability requirements**: The selected text model must support structured JSON output, tool calling, and (for visual template import) image inputs. If a smaller on-device model fails complex multi-slide template constraints, reduce the slide count, pick a simpler template such as **Standard**, or switch to a stronger text model in **Settings → AI models**.
+- **Human review required**: AI-generated drafts can contain factual inaccuracies or text that overflows a fixed layout box. Review both slide content and exported pages before sharing.
+- **Export typography**: PDF preserves the exact exported appearance. PowerPoint (`.pptx`) text layout may shift slightly if your presentation viewer does not have the template's fonts installed.
+- **Outline persistence**: Reopening a completed outline restores it without re-running AI generation; explicitly regenerating creates a new draft.
 
-Saved drafts, custom templates and assets belong to your PC App workspace. AI requests follow your selected Nimi Local or Cloud configuration; cloud requests send the relevant source content to the selected service.
+## Data handling and external services
 
-Stock-image services, external search and Presenton Community are optional business services with separate settings on your PC. Community sign-in does not replace your Nimi AI configuration. Reopening a completed outline restores it; explicitly regenerating creates a new draft.
+- **Local PC workspace**: Saved presentations, custom templates, uploaded source files, generated images, and retrieval caches stay in your PC workspace (`~/Library/Application Support/Presenton Nimi/workspaces/` on macOS; `%APPDATA%/Presenton Nimi/workspaces/` on Windows). Exported PDF and PPTX files are written only to destinations you choose.
+- **Nimi AI routing**: AI requests follow the Local or Cloud models you configure in Nimi. On-device models run locally on your PC; Cloud models send the relevant prompts or document excerpts to your chosen provider and may incur provider charges.
+- **Optional business services**: Stock-image providers (Pexels/Pixabay), external web search, and Presenton Community are optional services with separate settings on your PC. Community sign-in does not replace your Nimi AI configuration.
 
-## Browser access to your PC workspace
+## Remote PC workspace readiness
 
-Browser access (`https://presenton.nimi.xyz` once published) connects to the presentation workspace running in **Presenton `0.9.12-beta.1` or newer** on your PC. Earlier Catalog builds (`0.9.11-beta.10` and older) do not include the PC workspace integration provider and must be updated before connecting from the browser.
+Presenton `0.9.12-beta.1` on PC includes the workspace integration provider (`io.github.nimiplatform.presenton.workspace.v1`). Hosted browser access (`https://presenton.nimi.xyz`) is not publicly published in this native release and is admitted separately.
+
+Once a remote Web or development preview client is admitted, it connects to your running PC workspace rather than running offline:
 
 1. Keep Nimi and Presenton (`0.9.12-beta.1` or newer) open on your PC.
-2. Open Presenton in your browser, sign in through the official Nimi page, connect to your PC, and approve the Web source in Nimi Home.
-3. In **Nimi Home → Integrations**, allow that Web source to use all five Presenton workspace operations (`workspace.status`, `workspace.upload`, `workspace.request`, `workspace.response`, `workspace.close`). This access can read and change your PC presentation library, upload source material, run presentation workflows, and download PDF/PPTX exports.
+2. Sign in through the official Nimi page, connect to your PC, and approve the client source in Nimi Home.
+3. In **Nimi Home → Integrations**, allow all five Presenton workspace operations (`workspace.status`, `workspace.upload`, `workspace.request`, `workspace.response`, `workspace.close`). Models, credentials, files, and generation jobs remain owned by Presenton on your PC, and remote uploads are capped at 128 MiB per request.
 
-Models, service credentials, projects, files and generation tasks remain owned by Presenton on your PC. Change model and business service settings in **Presenton on your PC → Settings**. Cloud model use follows that PC configuration and may incur the selected service's charges. Browser uploads are limited to 128 MiB per request.
+## Attribution and help
 
-Keep the browser page open while transferring files. If the connection ends, inspect the original draft on your PC before retrying; the browser does not automatically restart generation. Reconnecting after a session change requires reloading the page, so save edits before signing out.
-
-## Android development preview
-
-The Android test App uses the same PC workspace (`0.9.12-beta.1` or newer) and requires the local editor service to stay running. Sign in in the system browser, return to Presenton, then connect and approve its Android source and workspace permissions in Nimi Home. This candidate is not an offline App. Use **Slide tools** for text, images, tables or AI editing; double-tap an image on the slide to replace it or upload a file.
-
-When a system file picker interrupts the PC connection, selected files and unsubmitted upload/chat drafts stay in memory. Reconnect and reopen the intended upload action, then choose **Use selected files**. PDF and PowerPoint exports use Android's system Save picker. Keep the App open until it reports the result; a full App restart clears unsubmitted device drafts and selected files. Saved presentations remain on the PC.
-
-## Help
-
-For help, report the App version, workflow, error message and export format at https://github.com/nimiplatform/presenton/issues. Remove credentials and private source material from reports.
+Presenton for Nimi is an Apache-2.0 adaptation of the open-source [Presenton](https://github.com/presenton/presenton) project. For help, report the App version, workflow, error message, and export format at https://github.com/nimiplatform/presenton/issues (remove credentials and private source files before posting).

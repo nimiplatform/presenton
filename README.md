@@ -1,3 +1,14 @@
+## Storefront migration & native candidate verification (`0.9.12-beta.1`) — 2026-11-21
+
+- Upgraded `@nimiplatform/app-tools` to `^0.16.0-rc.12` (`pnpm-lock.yaml` resolved from public npm; retained SDK `^0.24.0-rc.10`, Kit `^0.24.0-rc.16`, Nimi Coding `0.7.0`) and synced `.github/workflows/nimi-app-release.yml` so native releases upload `*-storefront-media.zip`.
+- Added bilingual (`en` default + `zh`) `metadata.storefront` in `nimi.app.yaml` (`category: design-diagrams`, 5 tags and 4 highlights per locale, `NIMI_APP.md` + `NIMI_APP.zh.md`, updated `0.9.12-beta.1` notes in `NIMI_RELEASE_NOTES.md`) and 10 static `1280×720` WebP real product screenshots in `assets/storefront/` captured from a clean fictional workspace (`cover`, `slide-editor`, `charts-export`, `outline-review`, `templates`, `dashboard`).
+- Verified live Nimi Home Developer Preview in both `zh` and `en` (all 5 gallery images via `nimi-shell-file://`, localized captions, category, highlights, and rendered Markdown with zero literal `**` or missing assets).
+- Verified Windows production build, native target pack, and aggregate storefront media pack (`nimi-app build --target windows-x86_64 --production`, `pack --target windows-x86_64 --production`, `pack --aggregate`):
+  - `io.github.nimiplatform.presenton-0.9.12-beta.1-windows-x86_64.nimiapp`: `1,875,368,510` bytes, SHA-256 `424c47868a0a0a2c98144be3dcbe569d4254fce1eb99fa8eef40baedf055590d`
+  - `io.github.nimiplatform.presenton-0.9.12-beta.1-windows-x86_64.app-info.json`: `106,565` bytes, SHA-256 `6e9253dddaad85b8ff7cc3c915a4a93c6f797f490793e9dd1eeee744efb9c4a9` (byte-for-byte identical to embedded `app-info.json`)
+  - `io.github.nimiplatform.presenton-0.9.12-beta.1-storefront-media.zip`: `529,060` bytes, SHA-256 `647989079893eda2be38e77a5558d05bc24787c7abd6d2eb61eac26009d3ad9e` (strict 10-image bijection with `app-info.json` and `candidate.storefront_media`)
+- **NOT-VERIFIED**: GitHub Actions dual-platform CI run (`windows-x86_64` + `macos-aarch64` cross-target parity), `v0.9.12-beta.1` immutable Release publication, Registry PR admission, live `nimi.ai` / Catalog storefront projection, and Hosted Web publication (deferred; not authorized in this turn).
+
 ## Upstream refresh, published Nimi pre cohort & static Hosted Web candidate — 2026-11-21
 
 Candidate **0.9.12-beta.1** merges upstream `presenton/presenton` `main` through commit `95964559dda6ffba5eab14e2b2db09b2c24a657a` (`150` upstream commits since `f9d3eba1a25712e25766b35a7af3b25f93ec1c01`, verified with `git merge-base --is-ancestor 95964559dda6ffba5eab14e2b2db09b2c24a657a HEAD`), upgrades all Nimi packages to the published npm `pre` cohort without local tarball overrides, and adds a static-hostable Web candidate for `https://presenton.nimi.xyz` (`public_slug: presenton`).
